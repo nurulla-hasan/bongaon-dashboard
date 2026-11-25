@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { SectionHeading } from "@/components/common/section-heading";
+import { HeroBannersCard } from "./_components/hero-banners-card";
 import { PasswordSettingsCard } from "./_components/password-settings-card";
 import { ProfileSettingsCard } from "./_components/profile-settings-card";
 import { StoreSettingsCard } from "./_components/store-settings-card";
@@ -21,6 +22,7 @@ export default function SettingsPage() {
       <div className="grid gap-6 lg:grid-cols-2">
         <ProfileSettingsCard />
         <PasswordSettingsCard />
+        <HeroBannersCard />
         <StoreSettingsCard />
       </div>
     </div>
