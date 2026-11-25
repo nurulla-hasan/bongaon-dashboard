@@ -29,6 +29,10 @@ export const metadata: Metadata = {
     template: "%s | Bongaon Bazar Admin",
   },
   description: "Admin dashboard for Bongaon Bazar online store.",
+  icons: {
+    icon: "/images/logo-mark.png",
+    apple: "/images/logo-mark.png",
+  },
   robots: { index: false, follow: false },
 };
 
