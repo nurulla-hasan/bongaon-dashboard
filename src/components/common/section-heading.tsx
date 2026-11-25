@@ -48,7 +48,7 @@ export function SectionHeading({
         className,
       )}
     >
-      <div className="min-w-0 space-y-1">
+      <div className="min-w-0 space-y-0.5">
         {eyebrow && (
           <p className="inline-flex items-center gap-2 text-xs font-medium tracking-widest text-primary uppercase">
             <span className="size-1.5 rounded-full bg-primary" aria-hidden />
@@ -61,7 +61,7 @@ export function SectionHeading({
         <Tag
           className={cn(
             hasKicker && "pt-1",
-            "font-heading tracking-tight",
+            "font-heading leading-tight tracking-tight",
             variant === "brand" ? "text-primary uppercase" : "text-foreground",
             headingSizes[Tag],
           )}
@@ -70,7 +70,7 @@ export function SectionHeading({
         </Tag>
 
         {description && (
-          <p className="text-sm leading-6 text-muted-foreground">{description}</p>
+          <p className="text-sm leading-5 text-muted-foreground">{description}</p>
         )}
       </div>
 
