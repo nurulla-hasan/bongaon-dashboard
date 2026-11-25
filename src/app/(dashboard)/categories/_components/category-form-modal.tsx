@@ -6,6 +6,7 @@ import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { FormInput } from "@/components/common/form-input";
+import { ImageUpload } from "@/components/common/image-upload";
 import { Modal } from "@/components/common/modal";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -22,18 +23,23 @@ const ICON_OPTIONS = [
   { label: "Folder (Default)", value: "folder" },
 ] as const;
 
+const slugRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
 const categorySchema = z.object({
-  name: z.string().trim().min(2, { error: "Name must be at least 2 characters" }),
+  name: z
+    .string()
+    .trim()
+    .min(2, { error: "Category name must be at least 2 characters." })
+    .max(100, { error: "Category name cannot exceed 100 characters." }),
   slug: z
     .string()
     .trim()
-    .min(2, { error: "Slug must be at least 2 characters" })
-    .regex(/^[a-z0-9-]+$/, {
-      error: "Slug can only contain lowercase letters, numbers, and hyphens",
+    .refine((val) => val === "" || (val.length >= 2 && slugRegex.test(val)), {
+      error: "Slug must be lowercase alphanumeric with hyphens.",
     }),
-  subtitle: z.string().trim().min(4, { error: "Subtitle must be at least 4 characters" }),
-  iconName: z.string().min(1, { error: "Please select an icon" }),
-  sortOrder: z.number().int().min(1, { error: "Sort order must be at least 1" }),
+  subtitle: z.string().trim().max(255, { error: "Subtitle cannot exceed 255 characters." }),
+  iconName: z.string().trim().max(50),
+  sortOrder: z.number().int().min(0, { error: "Sort order cannot be negative." }),
   isActive: z.boolean(),
 });
 
@@ -151,6 +157,12 @@ export function CategoryFormModal({
           label="Subtitle"
           type="textarea"
           placeholder="Short description shown under the category title"
+        />
+
+        <ImageUpload
+          id="category-image"
+          label="Category Image (Optional)"
+          description="PNG, JPG or WebP (uploaded via /categories/:id/image)"
         />
 
         <form.Field name="isActive">

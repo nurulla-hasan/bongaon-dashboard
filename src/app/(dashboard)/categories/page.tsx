@@ -11,8 +11,8 @@ export const metadata: Metadata = {
 
 const STATUS_OPTIONS = [
   { label: "All Status", value: "all" },
-  { label: "Active", value: "active" },
-  { label: "Inactive", value: "inactive" },
+  { label: "Active", value: "true" },
+  { label: "Inactive", value: "false" },
 ] as const;
 
 export default function CategoriesPage() {
@@ -34,7 +34,7 @@ export default function CategoriesPage() {
         />
 
         <FilterSelect
-          filterKey="status"
+          filterKey="isActive"
           placeholder="All Status"
           options={STATUS_OPTIONS}
           className="w-full sm:w-44"
