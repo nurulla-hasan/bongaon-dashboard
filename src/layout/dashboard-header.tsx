@@ -17,20 +17,28 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { getErrorMessage } from "@/lib/error";
 import { getInitials } from "@/lib/utils";
-
-const MOCK_ADMIN = {
-  name: "Super Admin",
-  email: "admin@bongaonbajar.com",
-  role: "ADMIN",
-};
+import { useLogout, useMe } from "@/services";
 
 export function DashboardHeader() {
   const router = useRouter();
+  const { data: user } = useMe();
+  const logout = useLogout();
 
-  const handleLogout = () => {
-    toast.success("Signed out (mock preview)");
-    router.push("/login");
+  const displayName = user?.name ?? "Admin";
+  const displayEmail = user?.email ?? "admin@bongaonbajar.com";
+  const displayRole = user?.role ?? "ADMIN";
+
+  const handleLogout = async () => {
+    try {
+      await logout.mutateAsync();
+      toast.success("Signed out");
+      router.push("/login");
+      router.refresh();
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Failed to sign out"));
+    }
   };
 
   return (
@@ -43,7 +51,7 @@ export function DashboardHeader() {
         <DropdownMenu>
           <DropdownMenuTrigger className="cursor-pointer rounded-full outline-hidden focus-visible:ring-3 focus-visible:ring-ring/50">
             <Avatar>
-              <AvatarFallback>{getInitials(MOCK_ADMIN.name)}</AvatarFallback>
+              <AvatarFallback>{getInitials(displayName)}</AvatarFallback>
             </Avatar>
           </DropdownMenuTrigger>
 
@@ -52,13 +60,13 @@ export function DashboardHeader() {
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col gap-1">
                   <p className="truncate text-sm font-semibold leading-tight">
-                    {MOCK_ADMIN.name}
+                    {displayName}
                   </p>
                   <p className="truncate text-xs text-muted-foreground">
-                    {MOCK_ADMIN.email}
+                    {displayEmail}
                   </p>
                   <div>
-                    <Badge variant="admin">{MOCK_ADMIN.role}</Badge>
+                    <Badge variant="admin">{displayRole}</Badge>
                   </div>
                 </div>
               </DropdownMenuLabel>

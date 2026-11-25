@@ -45,6 +45,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="en"
+      data-scroll-behavior="smooth"
       className={`${jakarta.variable} ${outfit.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >

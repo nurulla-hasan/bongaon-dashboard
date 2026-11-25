@@ -19,17 +19,26 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { adminNavigation } from "@/constants/navigation";
+import { getErrorMessage } from "@/lib/error";
+import { useLogout } from "@/services";
 
 export function DashboardSidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const logout = useLogout();
 
   const isItemActive = (href: string) =>
     pathname === href || pathname.startsWith(`${href}/`);
 
-  const handleSignOut = () => {
-    toast.success("Signed out (mock preview)");
-    router.push("/login");
+  const handleSignOut = async () => {
+    try {
+      await logout.mutateAsync();
+      toast.success("Signed out");
+      router.push("/login");
+      router.refresh();
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Failed to sign out"));
+    }
   };
 
   return (
