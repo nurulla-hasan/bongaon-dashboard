@@ -172,6 +172,9 @@ importers:
       '@tanstack/react-form':
         specifier: ^1.33.5
         version: 1.33.5(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      '@tanstack/react-query':
+        specifier: ^5.108.4
+        version: 5.108.4(@types/react@19.3.0)(react@19.3.0)
       '@tanstack/react-table':
         specifier: 8.21.3
         version: 8.21.3(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -904,6 +907,9 @@ packages:
     resolution: {integrity: sha512-y/xtNPNt/YeyoVxE/JCx+T7yjEzpezmbb+toK8DDD1P4m7Kzs5YR956+7OKexG3f8aXgC3rLZl7b1V+yNUSy5w==}
     engines: {node: '>=18'}
 
+  '@tanstack/query-core@5.108.4':
+    resolution: {integrity: sha512-2Ks5dlLWz4eXJrthOyG0qW3SLt3xx0RrQmAmN0rnmogiaaOYuWiAe6HAm9KE2b2v8nig+vraNz8fsfZ6fF6zFg==}
+
   '@tanstack/react-form@1.33.5':
     resolution: {integrity: sha512-LlRB28qJwO/QCGaHvWnbdh4haBgTFiZVmzA2uzxSBS3YA7/IqrQ6HOBK70CkFQ+DbflZ7NawsmSln13h5iIdTA==}
     peerDependencies:
@@ -911,6 +917,15 @@ packages:
       react: ^17.0.0 || ^18.0.0 || ^19.0.0
     peerDependenciesMeta:
       '@tanstack/react-start':
+        optional: true
+
+  '@tanstack/react-query@5.108.4':
+    resolution: {integrity: sha512-GlTa94kfEKTVsbzXe58rFA3GZ0ZE7N1aFtbZAfOS3XxMv8YNn4C+8rsz40LorHLazdm5PsqCroWaYAR+ZkMXMQ==}
+    peerDependencies:
+      '@types/react': ^18 || ^19
+      react: ^18 || ^19
+    peerDependenciesMeta:
+      '@types/react':
         optional: true
 
   '@tanstack/react-store@0.11.4':
@@ -3738,6 +3753,8 @@ snapshots:
 
   '@tanstack/pacer-lite@0.1.1': {}
 
+  '@tanstack/query-core@5.108.4': {}
+
   '@tanstack/react-form@1.33.5(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
     dependencies:
       '@tanstack/form-core': 1.33.5
@@ -3746,6 +3763,13 @@ snapshots:
     transitivePeerDependencies:
       - '@types/react'
       - react-dom
+
+  '@tanstack/react-query@5.108.4(@types/react@19.3.0)(react@19.3.0)':
+    dependencies:
+      '@tanstack/query-core': 5.108.4
+      react: 19.3.0
+    optionalDependencies:
+      '@types/react': 19.3.0
 
   '@tanstack/react-store@0.11.4(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
     dependencies:

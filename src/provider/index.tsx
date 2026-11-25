@@ -2,6 +2,8 @@
 
 import type { ReactNode } from "react";
 import { Toaster } from "sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryProvider } from "./query-provider";
 import { ThemeProvider } from "./theme-provider";
 
 export function Providers({ children }: { children: ReactNode }) {
@@ -12,8 +14,12 @@ export function Providers({ children }: { children: ReactNode }) {
       enableSystem
       disableTransitionOnChange
     >
-      {children}
-      <Toaster position="top-right" richColors closeButton />
+      <QueryProvider>
+        <TooltipProvider>
+          {children}
+          <Toaster position="top-right" richColors closeButton />
+        </TooltipProvider>
+      </QueryProvider>
     </ThemeProvider>
   );
 }
