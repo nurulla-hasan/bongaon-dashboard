@@ -236,7 +236,7 @@ export function DataTable<TData, TValue, TFilterKey extends string = string>({
                         key={`skeleton-cell-${colIndex}`}
                         className="h-12 pl-4"
                       >
-                        <Skeleton className="h-4 w-full max-w-[85%] rounded" />
+                        <Skeleton className="h-4 w-4/5 rounded" />
                       </TableCell>
                     ))}
                   </TableRow>

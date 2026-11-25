@@ -41,18 +41,24 @@ export default function CustomPagination({
     pages.push(totalPages);
   }
 
+  const isFirstPage = currentPage <= 1;
+  const isLastPage = currentPage >= totalPages;
+
   return (
     <Pagination>
       <PaginationContent className="gap-1">
         <PaginationItem>
           <PaginationPrevious
+            href="#"
+            aria-disabled={isFirstPage}
+            tabIndex={isFirstPage ? -1 : undefined}
             onClick={(e) => {
               e.preventDefault();
-              if (currentPage > 1) updatePage(currentPage - 1);
+              if (!isFirstPage) updatePage(currentPage - 1);
             }}
             className={cn(
               "h-8 w-8 cursor-pointer p-0 sm:w-auto sm:px-3",
-              currentPage <= 1 && "pointer-events-none opacity-50",
+              isFirstPage && "pointer-events-none opacity-50",
             )}
           />
         </PaginationItem>
@@ -65,6 +71,8 @@ export default function CustomPagination({
           ) : (
             <PaginationItem key={pageItem}>
               <PaginationLink
+                href="#"
+                aria-label={`Go to page ${pageItem}`}
                 onClick={(e) => {
                   e.preventDefault();
                   updatePage(Number(pageItem));
@@ -80,13 +88,16 @@ export default function CustomPagination({
 
         <PaginationItem>
           <PaginationNext
+            href="#"
+            aria-disabled={isLastPage}
+            tabIndex={isLastPage ? -1 : undefined}
             onClick={(e) => {
               e.preventDefault();
-              if (currentPage < totalPages) updatePage(currentPage + 1);
+              if (!isLastPage) updatePage(currentPage + 1);
             }}
             className={cn(
               "h-8 w-8 cursor-pointer p-0 sm:w-auto sm:px-3",
-              currentPage >= totalPages && "pointer-events-none opacity-50",
+              isLastPage && "pointer-events-none opacity-50",
             )}
           />
         </PaginationItem>

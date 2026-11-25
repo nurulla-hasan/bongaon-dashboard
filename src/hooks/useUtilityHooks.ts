@@ -249,8 +249,8 @@ export function useWindowSize() {
     width: number;
     height: number;
   }>({
-    width: typeof window !== "undefined" ? window.innerWidth : 1200,
-    height: typeof window !== "undefined" ? window.innerHeight : 800,
+    width: 1200,
+    height: 800,
   });
 
   useEffect(() => {
@@ -263,9 +263,13 @@ export function useWindowSize() {
       });
     }
 
+    const frameId = requestAnimationFrame(handleResize);
     window.addEventListener("resize", handleResize);
 
-    return () => window.removeEventListener("resize", handleResize);
+    return () => {
+      cancelAnimationFrame(frameId);
+      window.removeEventListener("resize", handleResize);
+    };
   }, []);
 
   return windowSize;

@@ -41,6 +41,8 @@ export default function DashboardOverviewPage() {
   return (
     <div className="flex flex-col gap-6">
       <SectionHeading
+        as="h2"
+        variant="brand"
         title="Dashboard Overview"
         description="Monitor Bongaon Bazar orders, inventory, reviews, and customer inquiries."
       >

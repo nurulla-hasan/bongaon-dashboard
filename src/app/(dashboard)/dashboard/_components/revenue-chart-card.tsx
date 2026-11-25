@@ -21,10 +21,6 @@ const chartConfig = {
     label: "Revenue (BDT)",
     color: "var(--chart-1)",
   },
-  orders: {
-    label: "Orders",
-    color: "var(--chart-2)",
-  },
 } satisfies ChartConfig;
 
 export function RevenueChartCard() {
@@ -39,7 +35,12 @@ export function RevenueChartCard() {
           <AreaChart data={MOCK_MONTHLY_CHART} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
             <CartesianGrid vertical={false} strokeDasharray="3 3" />
             <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
-            <YAxis tickLine={false} axisLine={false} tickMargin={8} />
+            <YAxis
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              tickFormatter={(value) => `৳${(Number(value) / 1000).toFixed(0)}k`}
+            />
             <ChartTooltip content={<ChartTooltipContent />} />
             <Area
               type="monotone"
