@@ -1,17 +1,7 @@
 "use client";
 
 import type { ColumnDef } from "@tanstack/react-table";
-import {
-  Droplet,
-  Flame,
-  FolderTree,
-  Gift,
-  Package,
-  Pencil,
-  Sparkles,
-  UtensilsCrossed,
-  type LucideIcon,
-} from "lucide-react";
+import { FolderTree, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { ConfirmationModal } from "@/components/common/confirmation-modal";
 import { Badge } from "@/components/ui/badge";
@@ -21,28 +11,17 @@ import type { MockCategory } from "@/data/mock-dashboard";
 import { formatDate } from "@/lib/utils";
 import { CategoryFormModal } from "./category-form-modal";
 
-const categoryIconMap: Record<string, LucideIcon> = {
-  flame: Flame,
-  jar: UtensilsCrossed,
-  droplet: Droplet,
-  sparkles: Sparkles,
-  package: Package,
-  gift: Gift,
-  folder: FolderTree,
-};
-
 export const categoryColumns: ColumnDef<MockCategory>[] = [
   {
     accessorKey: "name",
     header: "Category",
     cell: ({ row }) => {
       const category = row.original;
-      const Icon = categoryIconMap[category.iconName] ?? FolderTree;
 
       return (
         <div className="flex items-center gap-3 py-1">
           <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <Icon className="size-4" />
+            <FolderTree className="size-4" />
           </span>
           <div className="min-w-0">
             <p className="truncate font-medium text-foreground">{category.name}</p>

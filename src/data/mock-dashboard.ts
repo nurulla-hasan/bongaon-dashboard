@@ -15,9 +15,9 @@ export interface MockCategory {
   name: string;
   slug: string;
   subtitle: string;
-  iconName: string;
   sortOrder: number;
   isActive: boolean;
+  showOnHome?: boolean;
   productCount: number;
   createdAt: string;
 }
@@ -144,7 +144,6 @@ export const MOCK_CATEGORIES: MockCategory[] = [
     name: "Packaged Bhorta & Shutki",
     slug: "shutki-bhorta",
     subtitle: "Ready-to-eat Churi, Loitta & Chepa Shutki bhorta",
-    iconName: "flame",
     sortOrder: 1,
     isActive: true,
     productCount: 6,
@@ -155,7 +154,6 @@ export const MOCK_CATEGORIES: MockCategory[] = [
     name: "Homemade Achar & Chutney",
     slug: "achar-chutney",
     subtitle: "Sun-dried mango, olive & tamarind pickles",
-    iconName: "jar",
     sortOrder: 2,
     isActive: true,
     productCount: 5,
@@ -166,7 +164,6 @@ export const MOCK_CATEGORIES: MockCategory[] = [
     name: "Pure Ghee & Mustard Oil",
     slug: "ghee-oil",
     subtitle: "First-press ghani oil & granular gawa ghee",
-    iconName: "droplet",
     sortOrder: 3,
     isActive: true,
     productCount: 4,
@@ -177,7 +174,6 @@ export const MOCK_CATEGORIES: MockCategory[] = [
     name: "Date Jaggery & Honey",
     slug: "gur-honey",
     subtitle: "Winter patali gur & Sundarbans raw honey",
-    iconName: "sparkles",
     sortOrder: 4,
     isActive: true,
     productCount: 4,
@@ -188,7 +184,6 @@ export const MOCK_CATEGORIES: MockCategory[] = [
     name: "Whole & Ground Spices",
     slug: "village-spices",
     subtitle: "Village-milled turmeric, chili & coriander",
-    iconName: "package",
     sortOrder: 5,
     isActive: true,
     productCount: 3,
@@ -199,7 +194,6 @@ export const MOCK_CATEGORIES: MockCategory[] = [
     name: "Probashi Family Combo",
     slug: "probashi-combo",
     subtitle: "Curated gift packs for your family back home",
-    iconName: "gift",
     sortOrder: 6,
     isActive: true,
     productCount: 2,

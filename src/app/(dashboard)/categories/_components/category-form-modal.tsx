@@ -13,16 +13,6 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import type { MockCategory } from "@/data/mock-dashboard";
 
-const ICON_OPTIONS = [
-  { label: "Flame (Bhorta & Spice)", value: "flame" },
-  { label: "Jar (Achar & Chutney)", value: "jar" },
-  { label: "Droplet (Ghee & Oil)", value: "droplet" },
-  { label: "Sparkles (Gur & Honey)", value: "sparkles" },
-  { label: "Package (General)", value: "package" },
-  { label: "Gift (Combo Pack)", value: "gift" },
-  { label: "Folder (Default)", value: "folder" },
-] as const;
-
 const slugRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 const categorySchema = z.object({
@@ -38,9 +28,9 @@ const categorySchema = z.object({
       error: "Slug must be lowercase alphanumeric with hyphens.",
     }),
   subtitle: z.string().trim().max(255, { error: "Subtitle cannot exceed 255 characters." }),
-  iconName: z.string().trim().max(50),
   sortOrder: z.number().int().min(0, { error: "Sort order cannot be negative." }),
   isActive: z.boolean(),
+  showOnHome: z.boolean(),
 });
 
 interface CategoryFormModalProps {
@@ -60,9 +50,9 @@ export function CategoryFormModal({
       name: category?.name ?? "",
       slug: category?.slug ?? "",
       subtitle: category?.subtitle ?? "",
-      iconName: category?.iconName ?? "folder",
       sortOrder: category?.sortOrder ?? 1,
       isActive: category?.isActive ?? true,
+      showOnHome: category?.showOnHome ?? false,
     },
     validators: {
       onSubmit: categorySchema,
@@ -83,9 +73,9 @@ export function CategoryFormModal({
       name: category?.name ?? "",
       slug: category?.slug ?? "",
       subtitle: category?.subtitle ?? "",
-      iconName: category?.iconName ?? "folder",
       sortOrder: category?.sortOrder ?? 1,
       isActive: category?.isActive ?? true,
+      showOnHome: category?.showOnHome ?? false,
     });
   }, [open, category, form]);
 
@@ -144,15 +134,6 @@ export function CategoryFormModal({
 
         <FormInput
           form={form}
-          name="iconName"
-          label="Category Icon"
-          type="select"
-          placeholder="Select icon"
-          options={ICON_OPTIONS}
-        />
-
-        <FormInput
-          form={form}
           name="subtitle"
           label="Subtitle"
           type="textarea"
@@ -174,6 +155,26 @@ export function CategoryFormModal({
                 </Label>
                 <p className="text-xs text-muted-foreground">
                   Inactive categories stay hidden from customers.
+                </p>
+              </div>
+              <Switch
+                id={field.name}
+                checked={field.state.value}
+                onCheckedChange={(checked) => field.handleChange(checked)}
+              />
+            </div>
+          )}
+        </form.Field>
+
+        <form.Field name="showOnHome">
+          {(field) => (
+            <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2.5">
+              <div className="space-y-1">
+                <Label htmlFor={field.name} className="cursor-pointer">
+                  Show on Home Showcase
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Display a dedicated product showcase section on the home page.
                 </p>
               </div>
               <Switch
