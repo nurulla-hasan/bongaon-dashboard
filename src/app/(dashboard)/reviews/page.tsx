@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { FilterSelect } from "@/components/common/filter-select";
 import { SearchInput } from "@/components/common/search-input";
@@ -33,29 +34,31 @@ export default function ReviewsPage() {
         description="Moderate customer product reviews, ratings, and storefront approval."
       />
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <SearchInput
-          placeholder="Search customer, product, or comment..."
-          ariaLabel="Search reviews"
-        />
+      <Suspense fallback={null}>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <SearchInput
+            placeholder="Search customer, product, or comment..."
+            ariaLabel="Search reviews"
+          />
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <FilterSelect
-            filterKey="rating"
-            placeholder="All Ratings"
-            options={RATING_OPTIONS}
-            className="w-full sm:w-40"
-          />
-          <FilterSelect
-            filterKey="isApproved"
-            placeholder="All Status"
-            options={APPROVAL_OPTIONS}
-            className="w-full sm:w-40"
-          />
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <FilterSelect
+              filterKey="rating"
+              placeholder="All Ratings"
+              options={RATING_OPTIONS}
+              className="w-full sm:w-40"
+            />
+            <FilterSelect
+              filterKey="isApproved"
+              placeholder="All Status"
+              options={APPROVAL_OPTIONS}
+              className="w-full sm:w-40"
+            />
+          </div>
         </div>
-      </div>
 
-      <ReviewsTable />
+        <ReviewsTable />
+      </Suspense>
     </div>
   );
 }

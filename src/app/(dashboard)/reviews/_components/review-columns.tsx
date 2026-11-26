@@ -1,16 +1,83 @@
 "use client";
 
+import { useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Star } from "lucide-react";
 import { toast } from "sonner";
 import { ConfirmationModal } from "@/components/common/confirmation-modal";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import type { MockReview } from "@/data/mock-dashboard";
+import { getErrorMessage } from "@/lib/error";
 import { formatDate } from "@/lib/utils";
+import { useDeleteReview, useUpdateReview } from "@/services";
+import type { ApiReview } from "@/types";
 import { ReviewDetailsModal } from "./review-details-modal";
 
-export const reviewColumns: ColumnDef<MockReview>[] = [
+function ReviewStatusCell({ review }: { review: ApiReview }) {
+  const { mutate: updateRev, isPending } = useUpdateReview();
+
+  return (
+    <div className="flex items-center gap-2.5">
+      <Switch
+        checked={review.isApproved}
+        disabled={isPending}
+        onCheckedChange={(checked) => {
+          updateRev(
+            { id: review.id, payload: { isApproved: checked } },
+            {
+              onSuccess: () => {
+                toast.success(
+                  `Review by "${review.customerName}" ${checked ? "approved" : "hidden"}`,
+                );
+              },
+              onError: (err) => {
+                toast.error(
+                  getErrorMessage(err, "Failed to update review status"),
+                );
+              },
+            },
+          );
+        }}
+        aria-label={`Toggle approval for ${review.customerName}`}
+      />
+      <Badge variant={review.isApproved ? "active" : "pending"}>
+        {review.isApproved ? "Approved" : "Pending"}
+      </Badge>
+    </div>
+  );
+}
+
+function DeleteReviewCell({ review }: { review: ApiReview }) {
+  const [open, setOpen] = useState(false);
+  const { mutate: removeRev, isPending } = useDeleteReview();
+
+  return (
+    <ConfirmationModal
+      open={open}
+      onOpenChange={setOpen}
+      isLoading={isPending}
+      title="Delete Review"
+      description={`Are you sure you want to delete the review by "${review.customerName}"? This action cannot be undone.`}
+      confirmText="Delete"
+      loadingText="Deleting..."
+      triggerVariant="ghost"
+      triggerSize="icon"
+      onConfirm={() => {
+        removeRev(review.id, {
+          onSuccess: () => {
+            toast.success(`Deleted review by "${review.customerName}"`);
+            setOpen(false);
+          },
+          onError: (err) => {
+            toast.error(getErrorMessage(err, "Failed to delete review"));
+          },
+        });
+      }}
+    />
+  );
+}
+
+export const reviewColumns: ColumnDef<ApiReview>[] = [
   {
     accessorKey: "customerName",
     header: "Customer",
@@ -27,11 +94,11 @@ export const reviewColumns: ColumnDef<MockReview>[] = [
     },
   },
   {
-    accessorKey: "productName",
+    id: "product",
     header: "Product",
     cell: ({ row }) => (
-      <span className="max-w-52 truncate text-sm text-foreground">
-        {row.original.productName}
+      <span className="block max-w-52 truncate text-sm text-foreground">
+        {row.original.product?.name ?? "—"}
       </span>
     ),
   },
@@ -41,7 +108,9 @@ export const reviewColumns: ColumnDef<MockReview>[] = [
     cell: ({ row }) => (
       <div className="flex items-center gap-1">
         <Star className="size-3.5 fill-gold text-gold" />
-        <span className="font-medium text-foreground">{row.original.rating}/5</span>
+        <span className="font-medium text-foreground">
+          {row.original.rating}/5
+        </span>
       </div>
     ),
   },
@@ -57,25 +126,7 @@ export const reviewColumns: ColumnDef<MockReview>[] = [
   {
     accessorKey: "isApproved",
     header: "Status",
-    cell: ({ row }) => {
-      const review = row.original;
-      return (
-        <div className="flex items-center gap-2.5">
-          <Switch
-            defaultChecked={review.isApproved}
-            onCheckedChange={(checked) =>
-              toast.success(
-                `Review by "${review.customerName}" ${checked ? "approved" : "hidden"} (UI preview)`,
-              )
-            }
-            aria-label={`Toggle approval for ${review.customerName}`}
-          />
-          <Badge variant={review.isApproved ? "active" : "pending"}>
-            {review.isApproved ? "Approved" : "Pending"}
-          </Badge>
-        </div>
-      );
-    },
+    cell: ({ row }) => <ReviewStatusCell review={row.original} />,
   },
   {
     accessorKey: "createdAt",
@@ -95,17 +146,7 @@ export const reviewColumns: ColumnDef<MockReview>[] = [
       return (
         <div className="flex items-center justify-end gap-1.5 pr-2">
           <ReviewDetailsModal review={review} />
-
-          <ConfirmationModal
-            title="Delete Review"
-            description={`Are you sure you want to delete the review by "${review.customerName}"? This action cannot be undone.`}
-            confirmText="Delete"
-            triggerVariant="ghost"
-            triggerSize="icon"
-            onConfirm={() => {
-              toast.success(`Deleted review by "${review.customerName}" (UI preview)`);
-            }}
-          />
+          <DeleteReviewCell review={review} />
         </div>
       );
     },

@@ -8,11 +8,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import type { MockReview } from "@/data/mock-dashboard";
+import { getErrorMessage } from "@/lib/error";
 import { formatDate } from "@/lib/utils";
+import { useUpdateReview } from "@/services";
+import type { ApiReview } from "@/types";
 
 interface ReviewDetailsModalProps {
-  review: MockReview;
+  review: ApiReview;
   actionTrigger?: ReactNode;
 }
 
@@ -23,16 +25,31 @@ export function ReviewDetailsModal({
   const [open, setOpen] = useState(false);
   const [isApproved, setIsApproved] = useState(review.isApproved);
 
+  const { mutate: updateRev, isPending } = useUpdateReview();
+
   const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen && isPending) return;
     if (nextOpen) setIsApproved(review.isApproved);
     setOpen(nextOpen);
   };
 
   const handleSaveModeration = () => {
-    toast.success(
-      `Review by "${review.customerName}" ${isApproved ? "approved" : "hidden"} (UI preview)`,
+    if (isApproved === review.isApproved) return;
+
+    updateRev(
+      { id: review.id, payload: { isApproved } },
+      {
+        onSuccess: () => {
+          toast.success(
+            `Review by "${review.customerName}" ${isApproved ? "approved" : "hidden"}`,
+          );
+          setOpen(false);
+        },
+        onError: (err) => {
+          toast.error(getErrorMessage(err, "Failed to update review status"));
+        },
+      },
     );
-    setOpen(false);
   };
 
   return (
@@ -51,7 +68,7 @@ export function ReviewDetailsModal({
         )
       }
       title="Review Details"
-      description={`${review.productName} • ${formatDate(review.createdAt)}`}
+      description={`${review.product?.name ?? "Product"} • ${formatDate(review.createdAt)}`}
       size="default"
     >
       <div className="space-y-4">
@@ -81,7 +98,10 @@ export function ReviewDetailsModal({
 
         <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2.5">
           <div className="space-y-1">
-            <Label htmlFor={`review-approve-${review.id}`} className="cursor-pointer">
+            <Label
+              htmlFor={`review-approve-${review.id}`}
+              className="cursor-pointer"
+            >
               Approved on Storefront
             </Label>
             <p className="text-xs text-muted-foreground">
@@ -90,16 +110,28 @@ export function ReviewDetailsModal({
           </div>
           <Switch
             id={`review-approve-${review.id}`}
+            disabled={isPending}
             checked={isApproved}
             onCheckedChange={setIsApproved}
           />
         </div>
 
         <div className="flex items-center justify-end gap-2 pt-2">
-          <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={isPending}
+            onClick={() => handleOpenChange(false)}
+          >
             Close
           </Button>
-          <Button type="button" onClick={handleSaveModeration}>
+          <Button
+            type="button"
+            loading={isPending}
+            loadingText="Saving..."
+            disabled={isApproved === review.isApproved}
+            onClick={handleSaveModeration}
+          >
             Save Status
           </Button>
         </div>

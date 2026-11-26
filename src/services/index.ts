@@ -6,6 +6,8 @@ export * from "./api/order.api";
 export * from "./hooks/order.hook";
 export * from "./api/product.api";
 export * from "./hooks/product.hook";
+export * from "./api/review.api";
+export * from "./hooks/review.hook";
 export * from "./api/setting.api";
 export * from "./hooks/setting.hook";
 export * from "./api/user.api";
