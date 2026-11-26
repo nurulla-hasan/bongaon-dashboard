@@ -4,6 +4,8 @@ export * from "./api/category.api";
 export * from "./hooks/category.hook";
 export * from "./api/contact.api";
 export * from "./hooks/contact.hook";
+export * from "./api/dashboard.api";
+export * from "./hooks/dashboard.hook";
 export * from "./api/order.api";
 export * from "./hooks/order.hook";
 export * from "./api/product.api";
