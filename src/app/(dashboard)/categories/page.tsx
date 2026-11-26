@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { FilterSelect } from "@/components/common/filter-select";
 import { SearchInput } from "@/components/common/search-input";
@@ -27,21 +28,23 @@ export default function CategoriesPage() {
         <CategoryFormModal />
       </SectionHeading>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <SearchInput
-          placeholder="Search categories..."
-          ariaLabel="Search categories"
-        />
+      <Suspense fallback={null}>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <SearchInput
+            placeholder="Search categories..."
+            ariaLabel="Search categories"
+          />
 
-        <FilterSelect
-          filterKey="isActive"
-          placeholder="All Status"
-          options={STATUS_OPTIONS}
-          className="w-full sm:w-44"
-        />
-      </div>
+          <FilterSelect
+            filterKey="isActive"
+            placeholder="All Status"
+            options={STATUS_OPTIONS}
+            className="w-full sm:w-44"
+          />
+        </div>
 
-      <CategoriesTable />
+        <CategoriesTable />
+      </Suspense>
     </div>
   );
 }

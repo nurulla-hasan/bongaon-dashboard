@@ -4,37 +4,23 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useForm } from "@tanstack/react-form";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
-import { z } from "zod";
 import { FormInput } from "@/components/common/form-input";
 import { ImageUpload } from "@/components/common/image-upload";
 import { Modal } from "@/components/common/modal";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import type { MockCategory } from "@/data/mock-dashboard";
-
-const slugRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-
-const categorySchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(2, { error: "Category name must be at least 2 characters." })
-    .max(100, { error: "Category name cannot exceed 100 characters." }),
-  slug: z
-    .string()
-    .trim()
-    .refine((val) => val === "" || (val.length >= 2 && slugRegex.test(val)), {
-      error: "Slug must be lowercase alphanumeric with hyphens.",
-    }),
-  subtitle: z.string().trim().max(255, { error: "Subtitle cannot exceed 255 characters." }),
-  sortOrder: z.number().int().min(0, { error: "Sort order cannot be negative." }),
-  isActive: z.boolean(),
-  showOnHome: z.boolean(),
-});
+import { getErrorMessage } from "@/lib/error";
+import {
+  useCreateCategory,
+  useUpdateCategory,
+  useUploadCategoryImage,
+} from "@/services";
+import type { ApiCategory } from "@/types";
+import { categorySchema } from "@/validations";
 
 interface CategoryFormModalProps {
-  category?: MockCategory;
+  category?: ApiCategory;
   actionTrigger?: ReactNode;
 }
 
@@ -43,7 +29,14 @@ export function CategoryFormModal({
   actionTrigger,
 }: CategoryFormModalProps) {
   const [open, setOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const isEditing = Boolean(category);
+
+  const { mutate: createCat, isPending: isCreating } = useCreateCategory();
+  const { mutate: updateCat, isPending: isUpdating } = useUpdateCategory();
+  const { mutate: uploadImage, isPending: isUploading } =
+    useUploadCategoryImage();
+  const isPending = isCreating || isUpdating || isUploading;
 
   const form = useForm({
     defaultValues: {
@@ -55,20 +48,76 @@ export function CategoryFormModal({
       showOnHome: category?.showOnHome ?? false,
     },
     validators: {
-      onSubmit: categorySchema,
+      onChange: categorySchema,
     },
-    onSubmit: async ({ value }) => {
-      toast.success(
-        isEditing
-          ? `Updated "${value.name}" (UI preview)`
-          : `Created "${value.name}" (UI preview)`,
-      );
-      setOpen(false);
+    onSubmit: ({ value }) => {
+      const payload = {
+        name: value.name.trim(),
+        slug: value.slug.trim() || undefined,
+        subtitle: value.subtitle.trim(),
+        sortOrder: value.sortOrder,
+        isActive: value.isActive,
+        showOnHome: value.showOnHome,
+      };
+
+      const handleImageOrClose = (id: string, successMessage: string) => {
+        if (!selectedFile) {
+          toast.success(successMessage);
+          setOpen(false);
+          return;
+        }
+
+        uploadImage(
+          { id, file: selectedFile },
+          {
+            onSuccess: () => {
+              toast.success(successMessage);
+              setOpen(false);
+            },
+            onError: (err) => {
+              toast.error(
+                getErrorMessage(
+                  err,
+                  "Category saved, but image upload failed",
+                ),
+              );
+            },
+          },
+        );
+      };
+
+      if (isEditing && category) {
+        updateCat(
+          { id: category.id, payload },
+          {
+            onSuccess: (res) => {
+              handleImageOrClose(
+                res.data.id,
+                `Updated "${value.name.trim()}"`,
+              );
+            },
+            onError: (err) => {
+              toast.error(getErrorMessage(err, "Failed to update category"));
+            },
+          },
+        );
+        return;
+      }
+
+      createCat(payload, {
+        onSuccess: (res) => {
+          handleImageOrClose(res.data.id, `Created "${value.name.trim()}"`);
+        },
+        onError: (err) => {
+          toast.error(getErrorMessage(err, "Failed to create category"));
+        },
+      });
     },
   });
 
   useEffect(() => {
     if (!open) return;
+    setSelectedFile(null);
     form.reset({
       name: category?.name ?? "",
       slug: category?.slug ?? "",
@@ -112,7 +161,8 @@ export function CategoryFormModal({
           form={form}
           name="name"
           label="Category Name"
-          placeholder="e.g. Packaged Bhorta & Shutki"
+          placeholder="e.g. Dry Fish & Bhorta"
+          disabled={isPending}
         />
 
         <div className="grid gap-4 sm:grid-cols-2">
@@ -121,6 +171,7 @@ export function CategoryFormModal({
             name="slug"
             label="Slug"
             placeholder="e.g. shutki-bhorta"
+            disabled={isPending}
           />
 
           <FormInput
@@ -128,7 +179,8 @@ export function CategoryFormModal({
             name="sortOrder"
             label="Sort Order"
             type="number"
-            min={1}
+            min={0}
+            disabled={isPending}
           />
         </div>
 
@@ -138,12 +190,17 @@ export function CategoryFormModal({
           label="Subtitle"
           type="textarea"
           placeholder="Short description shown under the category title"
+          disabled={isPending}
         />
 
         <ImageUpload
+          key={category?.id ?? "new-category"}
           id="category-image"
           label="Category Image (Optional)"
           description="PNG, JPG or WebP (uploaded via /categories/:id/image)"
+          initialUrls={category?.imageUrl ? [category.imageUrl] : []}
+          disabled={isPending}
+          onFilesChange={(files) => setSelectedFile(files[0] ?? null)}
         />
 
         <form.Field name="isActive">
@@ -159,6 +216,7 @@ export function CategoryFormModal({
               </div>
               <Switch
                 id={field.name}
+                disabled={isPending}
                 checked={field.state.value}
                 onCheckedChange={(checked) => field.handleChange(checked)}
               />
@@ -179,6 +237,7 @@ export function CategoryFormModal({
               </div>
               <Switch
                 id={field.name}
+                disabled={isPending}
                 checked={field.state.value}
                 onCheckedChange={(checked) => field.handleChange(checked)}
               />
@@ -187,10 +246,21 @@ export function CategoryFormModal({
         </form.Field>
 
         <div className="flex items-center justify-end gap-2 pt-2">
-          <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setOpen(false)}
+            disabled={isPending}
+          >
             Cancel
           </Button>
-          <Button type="submit">{isEditing ? "Save Changes" : "Create Category"}</Button>
+          <Button
+            type="submit"
+            loading={isPending}
+            loadingText={isEditing ? "Saving..." : "Creating..."}
+          >
+            {isEditing ? "Save Changes" : "Create Category"}
+          </Button>
         </div>
       </form>
     </Modal>
