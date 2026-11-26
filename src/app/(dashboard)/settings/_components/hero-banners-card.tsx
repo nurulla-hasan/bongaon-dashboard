@@ -9,6 +9,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { ImageUpload } from "@/components/common/image-upload";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -22,7 +23,11 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { getErrorMessage } from "@/lib/error";
-import { useSettings, useUpdateSettings } from "@/services";
+import {
+  useSettings,
+  useUpdateSettings,
+  useUploadHeroBannerImage,
+} from "@/services";
 import type { HeroBannerSlide } from "@/types";
 
 function createEmptySlide(): HeroBannerSlide {
@@ -44,14 +49,21 @@ function createEmptySlide(): HeroBannerSlide {
 export function HeroBannersCard() {
   const { data: settingsRes, isLoading } = useSettings();
   const settings = settingsRes?.data;
-  const { mutate: updateSettings, isPending } = useUpdateSettings();
+  const { mutate: updateSettings, isPending: isUpdating } = useUpdateSettings();
+  const { mutate: uploadBannerImage, isPending: isUploading } =
+    useUploadHeroBannerImage();
+
   const [slides, setSlides] = useState<HeroBannerSlide[]>([]);
+  const [pendingFiles, setPendingFiles] = useState<Record<string, File>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const isBusy = isSubmitting || isUpdating || isUploading;
 
   useEffect(() => {
-    if (settings?.heroBanners) {
+    if (settings?.heroBanners && !isSubmitting) {
       setSlides(settings.heroBanners);
     }
-  }, [settings]);
+  }, [settings, isSubmitting]);
 
   const handleAddSlide = () => {
     if (slides.length >= 10) {
@@ -82,27 +94,94 @@ export function HeroBannersCard() {
   };
 
   const handleDelete = (index: number) => {
+    const target = slides[index];
+    if (target) {
+      setPendingFiles((prev) => {
+        if (!(target.id in prev)) return prev;
+        const next = { ...prev };
+        delete next[target.id];
+        return next;
+      });
+    }
     setSlides((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const handleSlideFilesChange = (slideId: string, files: File[]) => {
+    const file = files[0];
+    setPendingFiles((prev) => {
+      if (!file) {
+        if (!(slideId in prev)) return prev;
+        const next = { ...prev };
+        delete next[slideId];
+        return next;
+      }
+      return { ...prev, [slideId]: file };
+    });
+  };
+
   const handleSave = () => {
-    const invalid = slides.find((slide) => !slide.imageUrl.trim());
+    const invalid = slides.find(
+      (slide) => !slide.imageUrl.trim() && !pendingFiles[slide.id],
+    );
     if (invalid) {
-      toast.error("Every slide must have an Image URL");
+      toast.error("Every slide must have a banner image");
       return;
     }
 
-    updateSettings(
-      { heroBanners: slides },
-      {
-        onSuccess: () => {
-          toast.success("Promotional hero banners updated");
+    setIsSubmitting(true);
+    const nextSlides = slides.map((slide) => ({ ...slide }));
+
+    const saveUpdatedSlides = () => {
+      updateSettings(
+        { heroBanners: nextSlides },
+        {
+          onSuccess: () => {
+            setPendingFiles({});
+            setIsSubmitting(false);
+            toast.success("Promotional hero banners updated");
+          },
+          onError: (err) => {
+            setIsSubmitting(false);
+            toast.error(getErrorMessage(err, "Failed to update hero banners"));
+          },
+        },
+      );
+    };
+
+    const uploadSlideAt = (index: number) => {
+      if (index >= nextSlides.length) {
+        saveUpdatedSlides();
+        return;
+      }
+
+      const file = pendingFiles[nextSlides[index].id];
+      if (!file) {
+        uploadSlideAt(index + 1);
+        return;
+      }
+
+      uploadBannerImage(file, {
+        onSuccess: (res) => {
+          nextSlides[index] = {
+            ...nextSlides[index],
+            imageUrl: res.data.imageUrl,
+            imagePublicId: res.data.imagePublicId,
+          };
+          uploadSlideAt(index + 1);
         },
         onError: (err) => {
-          toast.error(getErrorMessage(err, "Failed to update hero banners"));
+          setIsSubmitting(false);
+          toast.error(
+            getErrorMessage(
+              err,
+              `Failed to upload image for Slide #${index + 1}`,
+            ),
+          );
         },
-      },
-    );
+      });
+    };
+
+    uploadSlideAt(0);
   };
 
   return (
@@ -120,7 +199,7 @@ export function HeroBannersCard() {
           variant="outline"
           size="default"
           onClick={handleAddSlide}
-          disabled={isLoading || slides.length >= 10}
+          disabled={isLoading || isBusy || slides.length >= 10}
         >
           <Plus className="size-4" />
           Add Slide
@@ -162,6 +241,7 @@ export function HeroBannersCard() {
                       </Label>
                       <Switch
                         id={`slide-active-${slide.id}`}
+                        disabled={isBusy}
                         checked={slide.isActive}
                         onCheckedChange={(checked) =>
                           handleUpdateSlide(index, { isActive: checked })
@@ -174,7 +254,7 @@ export function HeroBannersCard() {
                       variant="ghost"
                       size="icon"
                       aria-label="Move slide up"
-                      disabled={index === 0}
+                      disabled={isBusy || index === 0}
                       onClick={() => handleMove(index, -1)}
                     >
                       <ArrowUp className="size-4" />
@@ -184,7 +264,7 @@ export function HeroBannersCard() {
                       variant="ghost"
                       size="icon"
                       aria-label="Move slide down"
-                      disabled={index === slides.length - 1}
+                      disabled={isBusy || index === slides.length - 1}
                       onClick={() => handleMove(index, 1)}
                     >
                       <ArrowDown className="size-4" />
@@ -194,6 +274,7 @@ export function HeroBannersCard() {
                       variant="destructive"
                       size="icon"
                       aria-label="Delete slide"
+                      disabled={isBusy}
                       onClick={() => handleDelete(index)}
                     >
                       <Trash2 className="size-4" />
@@ -201,21 +282,25 @@ export function HeroBannersCard() {
                   </div>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label htmlFor={`slide-image-${slide.id}`}>
-                      Image URL *
-                    </Label>
-                    <Input
-                      id={`slide-image-${slide.id}`}
-                      placeholder="https://... or /images/hero-village-seamless.png"
-                      value={slide.imageUrl}
-                      onChange={(e) =>
-                        handleUpdateSlide(index, { imageUrl: e.target.value })
-                      }
-                    />
-                  </div>
+                <ImageUpload
+                  key={slide.id}
+                  id={`slide-image-${slide.id}`}
+                  label="Banner Image *"
+                  description="Recommended: 1200 × 960 px (5:4) or 1200 × 900 px (4:3) • PNG, JPG or WebP"
+                  initialUrls={slide.imageUrl ? [slide.imageUrl] : []}
+                  disabled={isBusy}
+                  onFilesChange={(files) =>
+                    handleSlideFilesChange(slide.id, files)
+                  }
+                  onRemoveInitialUrl={() =>
+                    handleUpdateSlide(index, {
+                      imageUrl: "",
+                      imagePublicId: undefined,
+                    })
+                  }
+                />
 
+                <div className="grid gap-4 sm:grid-cols-3">
                   <div className="space-y-1.5">
                     <Label htmlFor={`slide-link-${slide.id}`}>
                       Target Link (Optional)
@@ -223,6 +308,7 @@ export function HeroBannersCard() {
                     <Input
                       id={`slide-link-${slide.id}`}
                       placeholder="/products?category=gur-honey"
+                      disabled={isBusy}
                       value={slide.linkUrl}
                       onChange={(e) =>
                         handleUpdateSlide(index, { linkUrl: e.target.value })
@@ -237,6 +323,7 @@ export function HeroBannersCard() {
                     <Input
                       id={`slide-title-${slide.id}`}
                       placeholder="Winter Patali Gur Offer"
+                      disabled={isBusy}
                       value={slide.title}
                       onChange={(e) =>
                         handleUpdateSlide(index, { title: e.target.value })
@@ -251,6 +338,7 @@ export function HeroBannersCard() {
                     <Input
                       id={`slide-subtitle-${slide.id}`}
                       placeholder="Fresh batch from Jashore"
+                      disabled={isBusy}
                       value={slide.subtitle}
                       onChange={(e) =>
                         handleUpdateSlide(index, { subtitle: e.target.value })
@@ -266,7 +354,8 @@ export function HeroBannersCard() {
         <div className="flex justify-end pt-2">
           <Button
             type="button"
-            loading={isPending}
+            loading={isBusy}
+            loadingText="Saving..."
             onClick={handleSave}
             disabled={isLoading}
           >

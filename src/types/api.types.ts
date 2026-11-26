@@ -40,6 +40,7 @@ export interface HeroBannerSlide {
   title: string;
   subtitle: string;
   imageUrl: string;
+  imagePublicId?: string;
   linkUrl: string;
   isActive: boolean;
 }

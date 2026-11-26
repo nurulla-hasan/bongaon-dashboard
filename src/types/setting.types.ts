@@ -1,5 +1,10 @@
 import type { HeroBannerSlide } from "./api.types";
 
+export interface UploadedHeroBannerImage {
+  imageUrl: string;
+  imagePublicId: string;
+}
+
 export interface UpdateStoreSettingPayload {
   storeName?: string;
   supportPhone?: string;
