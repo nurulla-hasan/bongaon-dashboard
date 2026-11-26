@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useForm } from "@tanstack/react-form";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
-import { z } from "zod";
 import { FormInput } from "@/components/common/form-input";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,30 +16,31 @@ import {
 } from "@/components/ui/card";
 import { getErrorMessage } from "@/lib/error";
 import { useForgotPassword } from "@/services";
-
-const forgotPasswordSchema = z.object({
-  email: z.email({ error: "Please enter a valid email address." }),
-});
+import { forgotPasswordSchema } from "@/validations";
 
 export function ForgotPasswordForm() {
   const router = useRouter();
-  const forgotPassword = useForgotPassword();
+  const { mutate: forgotPassword, isPending } = useForgotPassword();
 
   const form = useForm({
     defaultValues: {
       email: "",
     },
     validators: {
-      onSubmit: forgotPasswordSchema,
+      onChange: forgotPasswordSchema,
     },
-    onSubmit: async ({ value }) => {
-      try {
-        const res = await forgotPassword.mutateAsync(value);
-        toast.success(res.message || "Reset OTP sent to your email");
-        router.push(`/verify-reset-otp?email=${encodeURIComponent(value.email)}`);
-      } catch (err) {
-        toast.error(getErrorMessage(err, "Failed to send reset OTP"));
-      }
+    onSubmit: ({ value }) => {
+      forgotPassword(value, {
+        onSuccess: (res) => {
+          toast.success(res.message || "Reset OTP sent to your email");
+          router.push(
+            `/verify-reset-otp?email=${encodeURIComponent(value.email)}`,
+          );
+        },
+        onError: (err) => {
+          toast.error(getErrorMessage(err, "Failed to send reset OTP"));
+        },
+      });
     },
   });
 
@@ -69,22 +69,18 @@ export function ForgotPasswordForm() {
             type="email"
             placeholder="admin@bongaonbajar.com"
             autoComplete="email"
-            disabled={forgotPassword.isPending}
+            disabled={isPending}
           />
 
-          <form.Subscribe selector={(state) => state.isSubmitting}>
-            {(isSubmitting) => (
-              <Button
-                type="submit"
-                size="lg"
-                className="w-full"
-                loading={isSubmitting || forgotPassword.isPending}
-                loadingText="Sending OTP..."
-              >
-                Send Reset OTP
-              </Button>
-            )}
-          </form.Subscribe>
+          <Button
+            type="submit"
+            size="lg"
+            className="w-full"
+            loading={isPending}
+            loadingText="Sending OTP..."
+          >
+            Send Reset OTP
+          </Button>
 
           <div className="text-center">
             <Link

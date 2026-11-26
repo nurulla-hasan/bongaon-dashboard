@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useForm } from "@tanstack/react-form";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
-import { z } from "zod";
 import { FormInput } from "@/components/common/form-input";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,22 +16,7 @@ import {
 } from "@/components/ui/card";
 import { getErrorMessage } from "@/lib/error";
 import { useResetPassword } from "@/services";
-
-const resetPasswordSchema = z
-  .object({
-    email: z.email({ error: "Please enter a valid email address." }),
-    otp: z.string().length(6, { error: "Reset code must be 6 digits." }),
-    password: z
-      .string()
-      .min(6, { error: "Password must be at least 6 characters." }),
-    confirmPassword: z
-      .string()
-      .min(1, { error: "Please confirm your new password." }),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    path: ["confirmPassword"],
-    error: "Passwords do not match.",
-  });
+import { resetPasswordSchema } from "@/validations";
 
 export function ResetPasswordForm({
   email,
@@ -42,7 +26,7 @@ export function ResetPasswordForm({
   otp: string;
 }) {
   const router = useRouter();
-  const resetPassword = useResetPassword();
+  const { mutate: resetPassword, isPending } = useResetPassword();
 
   const form = useForm({
     defaultValues: {
@@ -52,20 +36,25 @@ export function ResetPasswordForm({
       confirmPassword: "",
     },
     validators: {
-      onSubmit: resetPasswordSchema,
+      onChange: resetPasswordSchema,
     },
-    onSubmit: async ({ value }) => {
-      try {
-        const res = await resetPassword.mutateAsync({
+    onSubmit: ({ value }) => {
+      resetPassword(
+        {
           email: value.email,
           otp: value.otp,
           password: value.password,
-        });
-        toast.success(res.message || "Password reset successfully");
-        router.push("/login");
-      } catch (err) {
-        toast.error(getErrorMessage(err, "Failed to reset password"));
-      }
+        },
+        {
+          onSuccess: (res) => {
+            toast.success(res.message || "Password reset successfully");
+            router.push("/login");
+          },
+          onError: (err) => {
+            toast.error(getErrorMessage(err, "Failed to reset password"));
+          },
+        },
+      );
     },
   });
 
@@ -93,7 +82,7 @@ export function ResetPasswordForm({
             label="Email"
             type="email"
             placeholder="admin@bongaonbajar.com"
-            disabled={resetPassword.isPending}
+            disabled={isPending}
           />
 
           <FormInput
@@ -103,7 +92,7 @@ export function ResetPasswordForm({
             placeholder="123456"
             maxLength={6}
             inputMode="numeric"
-            disabled={resetPassword.isPending}
+            disabled={isPending}
           />
 
           <FormInput
@@ -113,7 +102,7 @@ export function ResetPasswordForm({
             type="password"
             placeholder="Minimum 6 characters"
             autoComplete="new-password"
-            disabled={resetPassword.isPending}
+            disabled={isPending}
           />
 
           <FormInput
@@ -123,22 +112,18 @@ export function ResetPasswordForm({
             type="password"
             placeholder="Re-enter new password"
             autoComplete="new-password"
-            disabled={resetPassword.isPending}
+            disabled={isPending}
           />
 
-          <form.Subscribe selector={(state) => state.isSubmitting}>
-            {(isSubmitting) => (
-              <Button
-                type="submit"
-                size="lg"
-                className="w-full"
-                loading={isSubmitting || resetPassword.isPending}
-                loadingText="Resetting..."
-              >
-                Reset Password
-              </Button>
-            )}
-          </form.Subscribe>
+          <Button
+            type="submit"
+            size="lg"
+            className="w-full"
+            loading={isPending}
+            loadingText="Resetting..."
+          >
+            Reset Password
+          </Button>
 
           <div className="text-center">
             <Link

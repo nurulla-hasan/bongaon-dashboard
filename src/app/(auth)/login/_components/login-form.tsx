@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "@tanstack/react-form";
 import { toast } from "sonner";
-import { z } from "zod";
 import { FormInput } from "@/components/common/form-input";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,11 +16,7 @@ import {
 import { USER_HOME } from "@/constants/auth";
 import { getErrorMessage } from "@/lib/error";
 import { useLogin } from "@/services";
-
-const loginSchema = z.object({
-  email: z.email({ error: "Please enter a valid email address." }),
-  password: z.string().min(1, { error: "Password is required." }),
-});
+import { loginSchema } from "@/validations";
 
 function getSafeRedirect(callbackUrl?: string): string {
   if (!callbackUrl) return USER_HOME;
@@ -39,7 +34,7 @@ export function LoginForm({
   error?: string;
 }) {
   const router = useRouter();
-  const loginMutation = useLogin();
+  const { mutate: login, isPending } = useLogin();
 
   const form = useForm({
     defaultValues: {
@@ -47,17 +42,19 @@ export function LoginForm({
       password: "",
     },
     validators: {
-      onSubmit: loginSchema,
+      onChange: loginSchema,
     },
-    onSubmit: async ({ value }) => {
-      try {
-        await loginMutation.mutateAsync(value);
-        toast.success("Signed in successfully");
-        router.push(getSafeRedirect(callbackUrl));
-        router.refresh();
-      } catch (err) {
-        toast.error(getErrorMessage(err, "Invalid email or password"));
-      }
+    onSubmit: ({ value }) => {
+      login(value, {
+        onSuccess: () => {
+          toast.success("Signed in successfully");
+          router.push(getSafeRedirect(callbackUrl));
+          router.refresh();
+        },
+        onError: (err) => {
+          toast.error(getErrorMessage(err, "Invalid email or password"));
+        },
+      });
     },
   });
 
@@ -92,7 +89,7 @@ export function LoginForm({
             type="email"
             placeholder="admin@bongaonbajar.com"
             autoComplete="email"
-            disabled={loginMutation.isPending}
+            disabled={isPending}
           />
 
           <div className="space-y-1.5">
@@ -103,7 +100,7 @@ export function LoginForm({
               type="password"
               placeholder="••••••••"
               autoComplete="current-password"
-              disabled={loginMutation.isPending}
+              disabled={isPending}
             />
             <div className="flex justify-end">
               <Link
@@ -115,19 +112,15 @@ export function LoginForm({
             </div>
           </div>
 
-          <form.Subscribe selector={(state) => state.isSubmitting}>
-            {(isSubmitting) => (
-              <Button
-                type="submit"
-                size="lg"
-                className="w-full"
-                loading={isSubmitting || loginMutation.isPending}
-                loadingText="Signing in..."
-              >
-                Sign In to Dashboard
-              </Button>
-            )}
-          </form.Subscribe>
+          <Button
+            type="submit"
+            size="lg"
+            className="w-full"
+            loading={isPending}
+            loadingText="Signing in..."
+          >
+            Sign In to Dashboard
+          </Button>
         </form>
       </CardContent>
     </Card>

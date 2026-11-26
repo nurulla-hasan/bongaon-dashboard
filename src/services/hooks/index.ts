@@ -1,3 +1,3 @@
-export * from "./use-auth";
-export * from "./use-settings";
+export * from "./auth.hook";
+export * from "./setting.hook";
 export * from "./user.hook";

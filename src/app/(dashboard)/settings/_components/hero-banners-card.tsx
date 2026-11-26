@@ -42,8 +42,9 @@ function createEmptySlide(): HeroBannerSlide {
 }
 
 export function HeroBannersCard() {
-  const { data: settings, isLoading } = useSettings();
-  const updateSettings = useUpdateSettings();
+  const { data: settingsRes, isLoading } = useSettings();
+  const settings = settingsRes?.data;
+  const { mutate: updateSettings, isPending } = useUpdateSettings();
   const [slides, setSlides] = useState<HeroBannerSlide[]>([]);
 
   useEffect(() => {
@@ -84,19 +85,24 @@ export function HeroBannersCard() {
     setSlides((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleSave = async () => {
+  const handleSave = () => {
     const invalid = slides.find((slide) => !slide.imageUrl.trim());
     if (invalid) {
       toast.error("Every slide must have an Image URL");
       return;
     }
 
-    try {
-      await updateSettings.mutateAsync({ heroBanners: slides });
-      toast.success("Promotional hero banners updated");
-    } catch (err) {
-      toast.error(getErrorMessage(err, "Failed to update hero banners"));
-    }
+    updateSettings(
+      { heroBanners: slides },
+      {
+        onSuccess: () => {
+          toast.success("Promotional hero banners updated");
+        },
+        onError: (err) => {
+          toast.error(getErrorMessage(err, "Failed to update hero banners"));
+        },
+      },
+    );
   };
 
   return (
@@ -260,7 +266,7 @@ export function HeroBannersCard() {
         <div className="flex justify-end pt-2">
           <Button
             type="button"
-            loading={updateSettings.isPending}
+            loading={isPending}
             onClick={handleSave}
             disabled={isLoading}
           >

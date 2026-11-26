@@ -42,3 +42,12 @@ export function deleteUser(id: string) {
     method: "DELETE",
   });
 }
+
+export function uploadProfileImage(file: File) {
+  const formData = new FormData();
+  formData.append("image", file);
+  return apiClient<ApiResponse<ApiUser>>("/users/profile-image", {
+    method: "PATCH",
+    body: formData,
+  });
+}

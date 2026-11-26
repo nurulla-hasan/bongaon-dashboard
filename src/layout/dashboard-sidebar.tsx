@@ -25,20 +25,22 @@ import { useLogout } from "@/services";
 export function DashboardSidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const logout = useLogout();
+  const { mutate: logout, isPending } = useLogout();
 
   const isItemActive = (href: string) =>
     pathname === href || pathname.startsWith(`${href}/`);
 
-  const handleSignOut = async () => {
-    try {
-      await logout.mutateAsync();
-      toast.success("Signed out");
-      router.push("/login");
-      router.refresh();
-    } catch (err) {
-      toast.error(getErrorMessage(err, "Failed to sign out"));
-    }
+  const handleSignOut = () => {
+    logout(undefined, {
+      onSuccess: () => {
+        toast.success("Signed out");
+        router.push("/login");
+        router.refresh();
+      },
+      onError: (err) => {
+        toast.error(getErrorMessage(err, "Failed to sign out"));
+      },
+    });
   };
 
   return (
@@ -77,6 +79,7 @@ export function DashboardSidebar() {
       <SidebarFooter className="border-t p-3">
         <Button
           variant="destructive"
+          loading={isPending}
           onClick={handleSignOut}
           className="w-full justify-start gap-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
         >

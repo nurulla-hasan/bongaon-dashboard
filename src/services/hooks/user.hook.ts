@@ -13,6 +13,7 @@ import {
   getUsers,
   updateUserRole,
   updateUserStatus,
+  uploadProfileImage,
 } from "../api/user.api";
 import type {
   GetUsersParams,
@@ -87,6 +88,18 @@ export function useDeleteUser() {
   return useMutation({
     mutationFn: deleteUser,
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+    },
+  });
+}
+
+export function useUploadProfileImage() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: uploadProfileImage,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
       queryClient.invalidateQueries({ queryKey: ["users"] });
     },
   });

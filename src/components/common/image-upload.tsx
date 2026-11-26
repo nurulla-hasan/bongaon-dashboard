@@ -13,6 +13,8 @@ interface ImageUploadProps {
   multiple?: boolean;
   maxFiles?: number;
   initialUrls?: string[];
+  disabled?: boolean;
+  onFilesChange?: (files: File[]) => void;
   className?: string;
 }
 
@@ -23,6 +25,8 @@ export function ImageUpload({
   multiple = false,
   maxFiles = 5,
   initialUrls = [],
+  disabled = false,
+  onFilesChange,
   className,
 }: ImageUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -32,6 +36,7 @@ export function ImageUpload({
     const files = Array.from(event.target.files ?? []);
     if (files.length === 0) return;
 
+    onFilesChange?.(files);
     const nextUrls = files.map((file) => URL.createObjectURL(file));
 
     if (multiple) {
@@ -66,6 +71,7 @@ export function ImageUpload({
         type="file"
         accept="image/*"
         multiple={multiple}
+        disabled={disabled}
         onChange={handleFileChange}
         className="sr-only"
       />

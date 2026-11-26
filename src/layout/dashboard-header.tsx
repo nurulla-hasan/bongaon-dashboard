@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { LogOut, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/common/theme-toggle";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
@@ -23,22 +23,25 @@ import { useLogout, useMe } from "@/services";
 
 export function DashboardHeader() {
   const router = useRouter();
-  const { data: user } = useMe();
-  const logout = useLogout();
+  const { data: meRes } = useMe();
+  const user = meRes?.data?.user;
+  const { mutate: logout } = useLogout();
 
   const displayName = user?.name ?? "Admin";
   const displayEmail = user?.email ?? "admin@bongaonbajar.com";
   const displayRole = user?.role ?? "ADMIN";
 
-  const handleLogout = async () => {
-    try {
-      await logout.mutateAsync();
-      toast.success("Signed out");
-      router.push("/login");
-      router.refresh();
-    } catch (err) {
-      toast.error(getErrorMessage(err, "Failed to sign out"));
-    }
+  const handleLogout = () => {
+    logout(undefined, {
+      onSuccess: () => {
+        toast.success("Signed out");
+        router.push("/login");
+        router.refresh();
+      },
+      onError: (err) => {
+        toast.error(getErrorMessage(err, "Failed to sign out"));
+      },
+    });
   };
 
   return (
@@ -51,6 +54,9 @@ export function DashboardHeader() {
         <DropdownMenu>
           <DropdownMenuTrigger className="cursor-pointer rounded-full outline-hidden focus-visible:ring-3 focus-visible:ring-ring/50">
             <Avatar>
+              {user?.imageUrl && (
+                <AvatarImage src={user.imageUrl} alt={displayName} />
+              )}
               <AvatarFallback>{getInitials(displayName)}</AvatarFallback>
             </Avatar>
           </DropdownMenuTrigger>

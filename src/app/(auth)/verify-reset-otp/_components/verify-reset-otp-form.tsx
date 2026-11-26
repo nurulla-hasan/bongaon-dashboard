@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useForm } from "@tanstack/react-form";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
-import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -24,56 +23,63 @@ import {
 import { useCountdown } from "@/hooks/useUtilityHooks";
 import { getErrorMessage } from "@/lib/error";
 import { useResendResetOtp, useVerifyResetOtp } from "@/services";
-
-const verifyOtpSchema = z.object({
-  otp: z.string().length(6, { error: "Reset code must be 6 digits." }),
-});
+import { verifyResetOtpSchema } from "@/validations";
 
 export function VerifyResetOtpForm({ email }: { email: string }) {
   const router = useRouter();
   const { secondsLeft, isRunning, start } = useCountdown(60, "admin-reset-otp");
-  const verifyOtp = useVerifyResetOtp();
-  const resendOtp = useResendResetOtp();
+  const { mutate: verifyOtp, isPending } = useVerifyResetOtp();
+  const { mutate: resendOtp, isPending: isResending } = useResendResetOtp();
 
   const form = useForm({
     defaultValues: {
       otp: "",
     },
     validators: {
-      onSubmit: verifyOtpSchema,
+      onChange: verifyResetOtpSchema,
     },
-    onSubmit: async ({ value }) => {
+    onSubmit: ({ value }) => {
       if (!email) {
         toast.error("Email is missing. Please restart from Forgot Password.");
         router.push("/forgot-password");
         return;
       }
 
-      try {
-        const res = await verifyOtp.mutateAsync({ email, otp: value.otp });
-        toast.success(res.message || "OTP verified");
-        router.push(
-          `/reset-password?email=${encodeURIComponent(email)}&otp=${encodeURIComponent(value.otp)}`,
-        );
-      } catch (err) {
-        toast.error(getErrorMessage(err, "Invalid or expired OTP"));
-      }
+      verifyOtp(
+        { email, otp: value.otp },
+        {
+          onSuccess: (res) => {
+            toast.success(res.message || "OTP verified");
+            router.push(
+              `/reset-password?email=${encodeURIComponent(email)}&otp=${encodeURIComponent(value.otp)}`,
+            );
+          },
+          onError: (err) => {
+            toast.error(getErrorMessage(err, "Invalid or expired OTP"));
+          },
+        },
+      );
     },
   });
 
-  const handleResend = async () => {
+  const handleResend = () => {
     if (!email) {
       toast.error("Email is missing. Please go back and enter your email.");
       return;
     }
 
-    try {
-      const res = await resendOtp.mutateAsync({ email });
-      start();
-      toast.success(res.message || `Reset OTP resent to ${email}`);
-    } catch (err) {
-      toast.error(getErrorMessage(err, "Failed to resend OTP"));
-    }
+    resendOtp(
+      { email },
+      {
+        onSuccess: (res) => {
+          start();
+          toast.success(res.message || `Reset OTP resent to ${email}`);
+        },
+        onError: (err) => {
+          toast.error(getErrorMessage(err, "Failed to resend OTP"));
+        },
+      },
+    );
   };
 
   return (
@@ -125,7 +131,7 @@ export function VerifyResetOtpForm({ email }: { email: string }) {
                       maxLength={6}
                       value={field.state.value}
                       onChange={(val) => field.handleChange(val)}
-                      disabled={verifyOtp.isPending}
+                      disabled={isPending}
                     >
                       <InputOTPGroup>
                         <InputOTPSlot index={0} />
@@ -146,19 +152,15 @@ export function VerifyResetOtpForm({ email }: { email: string }) {
             }}
           </form.Field>
 
-          <form.Subscribe selector={(state) => state.isSubmitting}>
-            {(isSubmitting) => (
-              <Button
-                type="submit"
-                size="lg"
-                className="w-full"
-                loading={isSubmitting || verifyOtp.isPending}
-                loadingText="Verifying..."
-              >
-                Verify OTP
-              </Button>
-            )}
-          </form.Subscribe>
+          <Button
+            type="submit"
+            size="lg"
+            className="w-full"
+            loading={isPending}
+            loadingText="Verifying..."
+          >
+            Verify OTP
+          </Button>
 
           <div className="flex items-center justify-between text-xs">
             <Link
@@ -171,11 +173,11 @@ export function VerifyResetOtpForm({ email }: { email: string }) {
 
             <button
               type="button"
-              disabled={isRunning || resendOtp.isPending}
+              disabled={isRunning || isResending}
               onClick={handleResend}
               className="cursor-pointer font-medium text-primary hover:underline disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {resendOtp.isPending
+              {isResending
                 ? "Sending..."
                 : isRunning
                   ? `Resend in ${secondsLeft}`
