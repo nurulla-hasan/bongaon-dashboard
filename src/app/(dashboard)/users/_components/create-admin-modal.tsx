@@ -4,17 +4,12 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useForm } from "@tanstack/react-form";
 import { UserPlus } from "lucide-react";
 import { toast } from "sonner";
-import { z } from "zod";
 import { FormInput } from "@/components/common/form-input";
 import { Modal } from "@/components/common/modal";
 import { Button } from "@/components/ui/button";
-
-const createAdminSchema = z.object({
-  name: z.string().trim().min(2, { error: "Name must be at least 2 characters." }),
-  email: z.email({ error: "Invalid email address." }),
-  password: z.string().min(8, { error: "Password must be at least 8 characters." }),
-  phone: z.string().trim(),
-});
+import { getErrorMessage } from "@/lib/error";
+import { useCreateAdmin } from "@/services";
+import { createAdminSchema } from "@/validations";
 
 interface CreateAdminModalProps {
   actionTrigger?: ReactNode;
@@ -22,6 +17,7 @@ interface CreateAdminModalProps {
 
 export function CreateAdminModal({ actionTrigger }: CreateAdminModalProps) {
   const [open, setOpen] = useState(false);
+  const { mutate: createAdmin, isPending } = useCreateAdmin();
 
   const form = useForm({
     defaultValues: {
@@ -31,11 +27,26 @@ export function CreateAdminModal({ actionTrigger }: CreateAdminModalProps) {
       phone: "",
     },
     validators: {
-      onSubmit: createAdminSchema,
+      onChange: createAdminSchema,
     },
-    onSubmit: async ({ value }) => {
-      toast.success(`Admin "${value.name}" created (UI preview)`);
-      setOpen(false);
+    onSubmit: ({ value }) => {
+      createAdmin(
+        {
+          name: value.name.trim(),
+          email: value.email.trim(),
+          password: value.password,
+          phone: value.phone.trim() || null,
+        },
+        {
+          onSuccess: () => {
+            toast.success(`Admin "${value.name.trim()}" created successfully`);
+            setOpen(false);
+          },
+          onError: (err) => {
+            toast.error(getErrorMessage(err, "Failed to create admin"));
+          },
+        },
+      );
     },
   });
 
@@ -79,6 +90,7 @@ export function CreateAdminModal({ actionTrigger }: CreateAdminModalProps) {
           name="name"
           label="Full Name"
           placeholder="e.g. Rahim Uddin"
+          disabled={isPending}
         />
 
         <FormInput
@@ -87,6 +99,7 @@ export function CreateAdminModal({ actionTrigger }: CreateAdminModalProps) {
           label="Email Address"
           type="email"
           placeholder="admin@bongaonbajar.com"
+          disabled={isPending}
         />
 
         <FormInput
@@ -94,6 +107,7 @@ export function CreateAdminModal({ actionTrigger }: CreateAdminModalProps) {
           name="phone"
           label="Phone Number (Optional)"
           placeholder="01712345678"
+          disabled={isPending}
         />
 
         <FormInput
@@ -102,13 +116,21 @@ export function CreateAdminModal({ actionTrigger }: CreateAdminModalProps) {
           label="Password"
           type="password"
           placeholder="Minimum 8 characters"
+          disabled={isPending}
         />
 
         <div className="flex items-center justify-end gap-2 pt-2">
-          <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setOpen(false)}
+            disabled={isPending}
+          >
             Cancel
           </Button>
-          <Button type="submit">Create Admin</Button>
+          <Button type="submit" loading={isPending} loadingText="Creating...">
+            Create Admin
+          </Button>
         </div>
       </form>
     </Modal>

@@ -1,16 +1,83 @@
 "use client";
 
+import { useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { toast } from "sonner";
 import { ConfirmationModal } from "@/components/common/confirmation-modal";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import type { MockUser } from "@/data/mock-dashboard";
+import { getErrorMessage } from "@/lib/error";
 import { formatDate, getInitials } from "@/lib/utils";
+import { useDeleteUser, useUpdateUserStatus } from "@/services";
+import type { ApiUser } from "@/types";
 import { UserManageModal } from "./user-manage-modal";
 
-export const userColumns: ColumnDef<MockUser>[] = [
+function UserStatusCell({ user }: { user: ApiUser }) {
+  const { mutate: updateStatus, isPending } = useUpdateUserStatus();
+  const isActive = user.status === "ACTIVE";
+
+  return (
+    <div className="flex items-center gap-2.5">
+      <Switch
+        checked={isActive}
+        disabled={isPending}
+        onCheckedChange={(checked) => {
+          const nextStatus = checked ? "ACTIVE" : "BLOCKED";
+          updateStatus(
+            { id: user.id, payload: { status: nextStatus } },
+            {
+              onSuccess: () => {
+                toast.success(
+                  `"${user.name}" ${checked ? "activated" : "blocked"}`,
+                );
+              },
+              onError: (err) => {
+                toast.error(getErrorMessage(err, "Failed to update status"));
+              },
+            },
+          );
+        }}
+        aria-label={`Toggle ${user.name} status`}
+      />
+      <Badge variant={isActive ? "active" : "blocked"}>
+        {isActive ? "Active" : "Blocked"}
+      </Badge>
+    </div>
+  );
+}
+
+function DeleteUserCell({ user }: { user: ApiUser }) {
+  const [open, setOpen] = useState(false);
+  const { mutate: removeUser, isPending } = useDeleteUser();
+
+  return (
+    <ConfirmationModal
+      open={open}
+      onOpenChange={setOpen}
+      isLoading={isPending}
+      title="Delete User"
+      description={`Are you sure you want to delete "${user.name}"? This action cannot be undone.`}
+      confirmText="Delete"
+      loadingText="Deleting..."
+      triggerVariant="ghost"
+      triggerSize="icon"
+      onConfirm={() => {
+        removeUser(user.id, {
+          onSuccess: () => {
+            toast.success(`Deleted "${user.name}"`);
+            setOpen(false);
+          },
+          onError: (err) => {
+            toast.error(getErrorMessage(err, "Failed to delete user"));
+          },
+        });
+      }}
+    />
+  );
+}
+
+export const userColumns: ColumnDef<ApiUser>[] = [
   {
     accessorKey: "name",
     header: "User",
@@ -19,6 +86,9 @@ export const userColumns: ColumnDef<MockUser>[] = [
       return (
         <div className="flex items-center gap-3 py-1">
           <Avatar>
+            {user.imageUrl && (
+              <AvatarImage src={user.imageUrl} alt={user.name} />
+            )}
             <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
           </Avatar>
           <div className="min-w-0">
@@ -60,26 +130,7 @@ export const userColumns: ColumnDef<MockUser>[] = [
   {
     accessorKey: "status",
     header: "Status",
-    cell: ({ row }) => {
-      const user = row.original;
-      const isActive = user.status === "ACTIVE";
-      return (
-        <div className="flex items-center gap-2.5">
-          <Switch
-            defaultChecked={isActive}
-            onCheckedChange={(checked) =>
-              toast.success(
-                `"${user.name}" ${checked ? "activated" : "blocked"} (UI preview)`,
-              )
-            }
-            aria-label={`Toggle ${user.name} status`}
-          />
-          <Badge variant={isActive ? "active" : "blocked"}>
-            {isActive ? "Active" : "Blocked"}
-          </Badge>
-        </div>
-      );
-    },
+    cell: ({ row }) => <UserStatusCell user={row.original} />,
   },
   {
     accessorKey: "createdAt",
@@ -99,17 +150,7 @@ export const userColumns: ColumnDef<MockUser>[] = [
       return (
         <div className="flex items-center justify-end gap-1.5 pr-2">
           <UserManageModal user={user} />
-
-          <ConfirmationModal
-            title="Delete User"
-            description={`Are you sure you want to delete "${user.name}"? This action cannot be undone.`}
-            confirmText="Delete"
-            triggerVariant="ghost"
-            triggerSize="icon"
-            onConfirm={() => {
-              toast.success(`Deleted "${user.name}" (UI preview)`);
-            }}
-          />
+          <DeleteUserCell user={user} />
         </div>
       );
     },

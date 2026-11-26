@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { FilterSelect } from "@/components/common/filter-select";
 import { SearchInput } from "@/components/common/search-input";
@@ -40,36 +41,38 @@ export default function UsersPage() {
         <CreateAdminModal />
       </SectionHeading>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <SearchInput
-          placeholder="Search name, email, or phone..."
-          ariaLabel="Search users"
-        />
+      <Suspense fallback={null}>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <SearchInput
+            placeholder="Search name, email, or phone..."
+            ariaLabel="Search users"
+          />
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <FilterSelect
-            filterKey="role"
-            placeholder="All Roles"
-            options={ROLE_OPTIONS}
-            className="w-full sm:w-36"
-          />
-          <FilterSelect
-            filterKey="status"
-            placeholder="All Status"
-            options={STATUS_OPTIONS}
-            className="w-full sm:w-36"
-          />
-          <FilterSelect
-            filterKey="sortBy"
-            placeholder="Sort By"
-            defaultValue="newest"
-            options={SORT_OPTIONS}
-            className="w-full sm:w-40"
-          />
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <FilterSelect
+              filterKey="role"
+              placeholder="All Roles"
+              options={ROLE_OPTIONS}
+              className="w-full sm:w-36"
+            />
+            <FilterSelect
+              filterKey="status"
+              placeholder="All Status"
+              options={STATUS_OPTIONS}
+              className="w-full sm:w-36"
+            />
+            <FilterSelect
+              filterKey="sortBy"
+              placeholder="Sort By"
+              defaultValue="newest"
+              options={SORT_OPTIONS}
+              className="w-full sm:w-40"
+            />
+          </div>
         </div>
-      </div>
 
-      <UsersTable />
+        <UsersTable />
+      </Suspense>
     </div>
   );
 }

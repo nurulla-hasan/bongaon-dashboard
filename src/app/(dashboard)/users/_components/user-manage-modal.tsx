@@ -4,7 +4,7 @@ import { useState, type ReactNode } from "react";
 import { Mail, Phone, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { Modal } from "@/components/common/modal";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -15,8 +15,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { MockUser, UserRole, UserStatus } from "@/data/mock-dashboard";
+import { getErrorMessage } from "@/lib/error";
 import { formatDate, getInitials } from "@/lib/utils";
+import { useUpdateUserRole, useUpdateUserStatus } from "@/services";
+import type { ApiUser, UserRole, UserStatus } from "@/types";
 
 const ROLE_OPTIONS: { label: string; value: UserRole }[] = [
   { label: "User", value: "USER" },
@@ -29,7 +31,7 @@ const STATUS_OPTIONS: { label: string; value: UserStatus }[] = [
 ];
 
 interface UserManageModalProps {
-  user: MockUser;
+  user: ApiUser;
   actionTrigger?: ReactNode;
 }
 
@@ -37,6 +39,11 @@ export function UserManageModal({ user, actionTrigger }: UserManageModalProps) {
   const [open, setOpen] = useState(false);
   const [role, setRole] = useState<UserRole>(user.role);
   const [status, setStatus] = useState<UserStatus>(user.status);
+
+  const updateRoleMutation = useUpdateUserRole();
+  const updateStatusMutation = useUpdateUserStatus();
+  const isSaving =
+    updateRoleMutation.isPending || updateStatusMutation.isPending;
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (nextOpen) {
@@ -46,9 +53,36 @@ export function UserManageModal({ user, actionTrigger }: UserManageModalProps) {
     setOpen(nextOpen);
   };
 
-  const handleSave = () => {
-    toast.success(`Updated "${user.name}" (${role}, ${status}) (UI preview)`);
-    setOpen(false);
+  const handleSave = async () => {
+    const roleChanged = role !== user.role;
+    const statusChanged = status !== user.status;
+
+    if (!roleChanged && !statusChanged) {
+      setOpen(false);
+      return;
+    }
+
+    try {
+      const updates: Promise<unknown>[] = [];
+      if (roleChanged) {
+        updates.push(
+          updateRoleMutation.mutateAsync({ id: user.id, payload: { role } }),
+        );
+      }
+      if (statusChanged) {
+        updates.push(
+          updateStatusMutation.mutateAsync({
+            id: user.id,
+            payload: { status },
+          }),
+        );
+      }
+      await Promise.all(updates);
+      toast.success(`Updated "${user.name}" successfully`);
+      setOpen(false);
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Failed to update user"));
+    }
   };
 
   return (
@@ -73,6 +107,9 @@ export function UserManageModal({ user, actionTrigger }: UserManageModalProps) {
       <div className="space-y-5">
         <div className="flex items-center gap-3 rounded-xl border border-border bg-muted/30 p-4">
           <Avatar>
+            {user.imageUrl && (
+              <AvatarImage src={user.imageUrl} alt={user.name} />
+            )}
             <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1">
@@ -102,11 +139,15 @@ export function UserManageModal({ user, actionTrigger }: UserManageModalProps) {
             <Label htmlFor={`user-role-${user.id}`}>Role</Label>
             <Select
               value={role}
+              disabled={isSaving}
               onValueChange={(value) => {
                 if (value) setRole(value as UserRole);
               }}
             >
-              <SelectTrigger id={`user-role-${user.id}`} className="w-full cursor-pointer">
+              <SelectTrigger
+                id={`user-role-${user.id}`}
+                className="w-full cursor-pointer"
+              >
                 <SelectValue>
                   {(val) =>
                     ROLE_OPTIONS.find((option) => option.value === val)?.label ??
@@ -132,15 +173,19 @@ export function UserManageModal({ user, actionTrigger }: UserManageModalProps) {
             <Label htmlFor={`user-status-${user.id}`}>Account Status</Label>
             <Select
               value={status}
+              disabled={isSaving}
               onValueChange={(value) => {
                 if (value) setStatus(value as UserStatus);
               }}
             >
-              <SelectTrigger id={`user-status-${user.id}`} className="w-full cursor-pointer">
+              <SelectTrigger
+                id={`user-status-${user.id}`}
+                className="w-full cursor-pointer"
+              >
                 <SelectValue>
                   {(val) =>
-                    STATUS_OPTIONS.find((option) => option.value === val)?.label ??
-                    String(val ?? "")
+                    STATUS_OPTIONS.find((option) => option.value === val)
+                      ?.label ?? String(val ?? "")
                   }
                 </SelectValue>
               </SelectTrigger>
@@ -160,10 +205,20 @@ export function UserManageModal({ user, actionTrigger }: UserManageModalProps) {
         </div>
 
         <div className="flex items-center justify-end gap-2 pt-2">
-          <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setOpen(false)}
+            disabled={isSaving}
+          >
             Cancel
           </Button>
-          <Button type="button" onClick={handleSave}>
+          <Button
+            type="button"
+            onClick={handleSave}
+            loading={isSaving}
+            loadingText="Saving..."
+          >
             Save Changes
           </Button>
         </div>
