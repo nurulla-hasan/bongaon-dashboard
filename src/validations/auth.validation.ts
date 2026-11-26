@@ -38,3 +38,20 @@ export const profileSchema = z.object({
   email: z.email({ error: "Invalid email address." }),
   phone: z.string().trim().max(30),
 });
+
+export const changePasswordSchema = z
+  .object({
+    oldPassword: z
+      .string()
+      .min(1, { error: "Current password is required." }),
+    newPassword: z
+      .string()
+      .min(6, { error: "New password must be at least 6 characters." }),
+    confirmPassword: z
+      .string()
+      .min(1, { error: "Please confirm your new password." }),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    path: ["confirmPassword"],
+    error: "Passwords do not match.",
+  });

@@ -48,6 +48,7 @@ export function useUpdateContactStatus() {
     }) => updateContactStatus(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
 }
@@ -65,6 +66,7 @@ export function useReplyContact() {
     }) => replyContact(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
 }
@@ -76,6 +78,7 @@ export function useDeleteContact() {
     mutationFn: deleteContact,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
 }

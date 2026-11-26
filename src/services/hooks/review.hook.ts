@@ -31,6 +31,7 @@ export function useUpdateReview() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["reviews"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
 }
@@ -43,6 +44,7 @@ export function useDeleteReview() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["reviews"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
 }

@@ -1,13 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import {
-  ArrowDown,
-  ArrowUp,
-  ImagePlus,
-  Plus,
-  Trash2,
-} from "lucide-react";
+import { useState } from "react";
+import { ArrowDown, ArrowUp, ImagePlus, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { ImageUpload } from "@/components/common/image-upload";
 import { Button } from "@/components/ui/button";
@@ -46,24 +40,20 @@ function createEmptySlide(): HeroBannerSlide {
   };
 }
 
-export function HeroBannersCard() {
-  const { data: settingsRes, isLoading } = useSettings();
-  const settings = settingsRes?.data;
+function HeroBannersForm({
+  initialSlides,
+}: {
+  initialSlides: HeroBannerSlide[];
+}) {
   const { mutate: updateSettings, isPending: isUpdating } = useUpdateSettings();
   const { mutate: uploadBannerImage, isPending: isUploading } =
     useUploadHeroBannerImage();
 
-  const [slides, setSlides] = useState<HeroBannerSlide[]>([]);
+  const [slides, setSlides] = useState<HeroBannerSlide[]>(() => initialSlides);
   const [pendingFiles, setPendingFiles] = useState<Record<string, File>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isBusy = isSubmitting || isUpdating || isUploading;
-
-  useEffect(() => {
-    if (settings?.heroBanners && !isSubmitting) {
-      setSlides(settings.heroBanners);
-    }
-  }, [settings, isSubmitting]);
 
   const handleAddSlide = () => {
     if (slides.length >= 10) {
@@ -199,7 +189,7 @@ export function HeroBannersCard() {
           variant="outline"
           size="default"
           onClick={handleAddSlide}
-          disabled={isLoading || isBusy || slides.length >= 10}
+          disabled={isBusy || slides.length >= 10}
         >
           <Plus className="size-4" />
           Add Slide
@@ -207,9 +197,7 @@ export function HeroBannersCard() {
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {isLoading ? (
-          <Skeleton className="h-40 w-full rounded-xl" />
-        ) : slides.length === 0 ? (
+        {slides.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-10 text-center">
             <ImagePlus className="size-8 text-muted-foreground" />
             <p className="mt-2 text-sm font-medium text-foreground">
@@ -357,12 +345,45 @@ export function HeroBannersCard() {
             loading={isBusy}
             loadingText="Saving..."
             onClick={handleSave}
-            disabled={isLoading}
           >
             Save Hero Banners
           </Button>
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+export function HeroBannersCard() {
+  const { data: settingsRes, isLoading } = useSettings();
+  const settings = settingsRes?.data;
+
+  if (isLoading) {
+    return (
+      <Card className="lg:col-span-2">
+        <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-4">
+          <div className="space-y-1">
+            <CardTitle>Hero Promotional Banners</CardTitle>
+            <CardDescription>
+              Manage the storefront hero carousel slides (up to 10 slides).
+            </CardDescription>
+          </div>
+          <Button type="button" variant="outline" size="default" disabled>
+            <Plus className="size-4" />
+            Add Slide
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <Skeleton className="h-40 w-full rounded-xl" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <HeroBannersForm
+      key={settings?.updatedAt ?? "default"}
+      initialSlides={settings?.heroBanners ?? []}
+    />
   );
 }

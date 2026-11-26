@@ -2,7 +2,6 @@
 
 import { useForm } from "@tanstack/react-form";
 import { toast } from "sonner";
-import { z } from "zod";
 import { FormInput } from "@/components/common/form-input";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,21 +11,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-
-const changePasswordSchema = z
-  .object({
-    oldPassword: z.string().min(1, { error: "Current password is required." }),
-    newPassword: z
-      .string()
-      .min(6, { error: "New password must be at least 6 characters." }),
-    confirmPassword: z.string().min(1, { error: "Please confirm your new password." }),
-  })
-  .refine((data) => data.newPassword === data.confirmPassword, {
-    path: ["confirmPassword"],
-    error: "Passwords do not match.",
-  });
+import { getErrorMessage } from "@/lib/error";
+import { useChangePassword } from "@/services";
+import { changePasswordSchema } from "@/validations";
 
 export function PasswordSettingsCard() {
+  const { mutate: changePwd, isPending } = useChangePassword();
+
   const form = useForm({
     defaultValues: {
       oldPassword: "",
@@ -34,15 +25,28 @@ export function PasswordSettingsCard() {
       confirmPassword: "",
     },
     validators: {
-      onSubmit: changePasswordSchema,
+      onChange: changePasswordSchema,
     },
-    onSubmit: async () => {
-      toast.success("Password updated (UI preview)");
-      form.reset({
-        oldPassword: "",
-        newPassword: "",
-        confirmPassword: "",
-      });
+    onSubmit: ({ value }) => {
+      changePwd(
+        {
+          oldPassword: value.oldPassword,
+          newPassword: value.newPassword,
+        },
+        {
+          onSuccess: () => {
+            toast.success("Password updated successfully");
+            form.reset({
+              oldPassword: "",
+              newPassword: "",
+              confirmPassword: "",
+            });
+          },
+          onError: (err) => {
+            toast.error(getErrorMessage(err, "Failed to update password"));
+          },
+        },
+      );
     },
   });
 
@@ -70,6 +74,7 @@ export function PasswordSettingsCard() {
             label="Current Password"
             type="password"
             placeholder="••••••••"
+            disabled={isPending}
           />
 
           <FormInput
@@ -78,6 +83,7 @@ export function PasswordSettingsCard() {
             label="New Password"
             type="password"
             placeholder="Minimum 6 characters"
+            disabled={isPending}
           />
 
           <FormInput
@@ -86,10 +92,13 @@ export function PasswordSettingsCard() {
             label="Confirm New Password"
             type="password"
             placeholder="Re-enter new password"
+            disabled={isPending}
           />
 
           <div className="flex justify-end pt-2">
-            <Button type="submit">Update Password</Button>
+            <Button type="submit" loading={isPending} loadingText="Updating...">
+              Update Password
+            </Button>
           </div>
         </form>
       </CardContent>

@@ -37,15 +37,19 @@ interface UserManageModalProps {
 
 export function UserManageModal({ user, actionTrigger }: UserManageModalProps) {
   const [open, setOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [role, setRole] = useState<UserRole>(user.role);
   const [status, setStatus] = useState<UserStatus>(user.status);
 
-  const updateRoleMutation = useUpdateUserRole();
-  const updateStatusMutation = useUpdateUserStatus();
-  const isSaving =
-    updateRoleMutation.isPending || updateStatusMutation.isPending;
+  const { mutate: updateRole, isPending: isUpdatingRole } = useUpdateUserRole();
+  const { mutate: updateStatus, isPending: isUpdatingStatus } =
+    useUpdateUserStatus();
+
+  const isBusy = isSubmitting || isUpdatingRole || isUpdatingStatus;
+  const hasChanges = role !== user.role || status !== user.status;
 
   const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen && isBusy) return;
     if (nextOpen) {
       setRole(user.role);
       setStatus(user.status);
@@ -53,7 +57,7 @@ export function UserManageModal({ user, actionTrigger }: UserManageModalProps) {
     setOpen(nextOpen);
   };
 
-  const handleSave = async () => {
+  const handleSave = () => {
     const roleChanged = role !== user.role;
     const statusChanged = status !== user.status;
 
@@ -62,27 +66,47 @@ export function UserManageModal({ user, actionTrigger }: UserManageModalProps) {
       return;
     }
 
-    try {
-      const updates: Promise<unknown>[] = [];
-      if (roleChanged) {
-        updates.push(
-          updateRoleMutation.mutateAsync({ id: user.id, payload: { role } }),
-        );
-      }
-      if (statusChanged) {
-        updates.push(
-          updateStatusMutation.mutateAsync({
-            id: user.id,
-            payload: { status },
-          }),
-        );
-      }
-      await Promise.all(updates);
+    setIsSubmitting(true);
+
+    const finishSuccess = () => {
+      setIsSubmitting(false);
       toast.success(`Updated "${user.name}" successfully`);
       setOpen(false);
-    } catch (err) {
-      toast.error(getErrorMessage(err, "Failed to update user"));
+    };
+
+    const syncStatus = () => {
+      if (!statusChanged) {
+        finishSuccess();
+        return;
+      }
+
+      updateStatus(
+        { id: user.id, payload: { status } },
+        {
+          onSuccess: finishSuccess,
+          onError: (err) => {
+            setIsSubmitting(false);
+            toast.error(getErrorMessage(err, "Failed to update user status"));
+          },
+        },
+      );
+    };
+
+    if (roleChanged) {
+      updateRole(
+        { id: user.id, payload: { role } },
+        {
+          onSuccess: syncStatus,
+          onError: (err) => {
+            setIsSubmitting(false);
+            toast.error(getErrorMessage(err, "Failed to update user role"));
+          },
+        },
+      );
+      return;
     }
+
+    syncStatus();
   };
 
   return (
@@ -139,7 +163,7 @@ export function UserManageModal({ user, actionTrigger }: UserManageModalProps) {
             <Label htmlFor={`user-role-${user.id}`}>Role</Label>
             <Select
               value={role}
-              disabled={isSaving}
+              disabled={isBusy}
               onValueChange={(value) => {
                 if (value) setRole(value as UserRole);
               }}
@@ -173,7 +197,7 @@ export function UserManageModal({ user, actionTrigger }: UserManageModalProps) {
             <Label htmlFor={`user-status-${user.id}`}>Account Status</Label>
             <Select
               value={status}
-              disabled={isSaving}
+              disabled={isBusy}
               onValueChange={(value) => {
                 if (value) setStatus(value as UserStatus);
               }}
@@ -208,15 +232,16 @@ export function UserManageModal({ user, actionTrigger }: UserManageModalProps) {
           <Button
             type="button"
             variant="outline"
-            onClick={() => setOpen(false)}
-            disabled={isSaving}
+            onClick={() => handleOpenChange(false)}
+            disabled={isBusy}
           >
             Cancel
           </Button>
           <Button
             type="button"
             onClick={handleSave}
-            loading={isSaving}
+            disabled={!hasChanges}
+            loading={isBusy}
             loadingText="Saving..."
           >
             Save Changes

@@ -44,6 +44,7 @@ export function useCreateAdmin() {
     mutationFn: createAdmin,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
 }
@@ -89,6 +90,7 @@ export function useDeleteUser() {
     mutationFn: deleteUser,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
 }
