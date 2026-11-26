@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { FilterSelect } from "@/components/common/filter-select";
 import { SearchInput } from "@/components/common/search-input";
@@ -34,30 +35,32 @@ export default function OrdersPage() {
         description="Review incoming Cash on Delivery orders and update fulfillment status."
       />
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <SearchInput
-          placeholder="Search order #, phone, or name..."
-          ariaLabel="Search orders"
-        />
+      <Suspense fallback={null}>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <SearchInput
+            placeholder="Search order #, phone, or name..."
+            ariaLabel="Search orders"
+          />
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <FilterSelect
-            filterKey="status"
-            placeholder="All Status"
-            options={STATUS_OPTIONS}
-            className="w-full sm:w-44"
-          />
-          <FilterSelect
-            filterKey="sortBy"
-            placeholder="Sort By"
-            defaultValue="newest"
-            options={SORT_OPTIONS}
-            className="w-full sm:w-44"
-          />
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <FilterSelect
+              filterKey="status"
+              placeholder="All Status"
+              options={STATUS_OPTIONS}
+              className="w-full sm:w-44"
+            />
+            <FilterSelect
+              filterKey="sortBy"
+              placeholder="Sort By"
+              defaultValue="newest"
+              options={SORT_OPTIONS}
+              className="w-full sm:w-44"
+            />
+          </div>
         </div>
-      </div>
 
-      <OrdersTable />
+        <OrdersTable />
+      </Suspense>
     </div>
   );
 }

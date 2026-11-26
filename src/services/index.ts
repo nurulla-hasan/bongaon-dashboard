@@ -2,6 +2,8 @@ export * from "./api/auth.api";
 export * from "./hooks/auth.hook";
 export * from "./api/category.api";
 export * from "./hooks/category.hook";
+export * from "./api/order.api";
+export * from "./hooks/order.hook";
 export * from "./api/product.api";
 export * from "./hooks/product.hook";
 export * from "./api/setting.api";

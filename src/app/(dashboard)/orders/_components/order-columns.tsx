@@ -2,8 +2,8 @@
 
 import type { ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
-import type { MockOrder, OrderStatus } from "@/data/mock-dashboard";
 import { formatCurrencyBDT, formatDate } from "@/lib/utils";
+import type { ApiOrder, OrderStatus } from "@/types";
 import { OrderDetailsModal } from "./order-details-modal";
 
 const statusVariantMap: Record<
@@ -25,7 +25,7 @@ const statusLabelMap: Record<OrderStatus, string> = {
   CANCELLED: "Cancelled",
 };
 
-export const orderColumns: ColumnDef<MockOrder>[] = [
+export const orderColumns: ColumnDef<ApiOrder>[] = [
   {
     accessorKey: "orderNumber",
     header: "Order",
@@ -50,7 +50,9 @@ export const orderColumns: ColumnDef<MockOrder>[] = [
       const order = row.original;
       return (
         <div className="min-w-0">
-          <p className="truncate font-medium text-foreground">{order.receiverName}</p>
+          <p className="truncate font-medium text-foreground">
+            {order.receiverName}
+          </p>
           <p className="font-mono text-xs text-muted-foreground">
             {order.receiverPhone}
           </p>
@@ -77,7 +79,10 @@ export const orderColumns: ColumnDef<MockOrder>[] = [
     id: "items",
     header: "Items",
     cell: ({ row }) => {
-      const count = row.original.items.reduce((sum, item) => sum + item.quantity, 0);
+      const count = row.original.items.reduce(
+        (sum, item) => sum + item.quantity,
+        0,
+      );
       return (
         <Badge variant="secondary">
           {count} {count === 1 ? "item" : "items"}

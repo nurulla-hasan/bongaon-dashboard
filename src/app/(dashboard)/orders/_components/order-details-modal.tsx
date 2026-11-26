@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { Eye, MapPin, Phone, StickyNote } from "lucide-react";
+import { Eye, MapPin, Package, Phone, StickyNote } from "lucide-react";
 import { toast } from "sonner";
 import { Modal } from "@/components/common/modal";
 import { Badge } from "@/components/ui/badge";
@@ -15,8 +15,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import type { MockOrder, OrderStatus } from "@/data/mock-dashboard";
+import { getErrorMessage } from "@/lib/error";
 import { formatCurrencyBDT, formatDate } from "@/lib/utils";
+import { useUpdateOrderStatus } from "@/services";
+import type { ApiOrder, OrderStatus } from "@/types";
 
 const ORDER_STATUS_OPTIONS: { label: string; value: OrderStatus }[] = [
   { label: "Pending", value: "PENDING" },
@@ -27,7 +29,7 @@ const ORDER_STATUS_OPTIONS: { label: string; value: OrderStatus }[] = [
 ];
 
 interface OrderDetailsModalProps {
-  order: MockOrder;
+  order: ApiOrder;
   actionTrigger?: ReactNode;
 }
 
@@ -38,14 +40,35 @@ export function OrderDetailsModal({
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState<OrderStatus>(order.status);
 
+  const { mutate: updateStatus, isPending } = useUpdateOrderStatus();
+  const isCancelled = order.status === "CANCELLED";
+
   const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen && isPending) return;
     if (nextOpen) setStatus(order.status);
     setOpen(nextOpen);
   };
 
   const handleStatusUpdate = () => {
-    toast.success(`Order ${order.orderNumber} updated to ${status} (UI preview)`);
-    setOpen(false);
+    if (isCancelled || status === order.status) return;
+
+    updateStatus(
+      { id: order.id, payload: { status } },
+      {
+        onSuccess: () => {
+          const statusLabel =
+            ORDER_STATUS_OPTIONS.find((opt) => opt.value === status)?.label ??
+            status;
+          toast.success(
+            `Order ${order.orderNumber} updated to ${statusLabel}`,
+          );
+          setOpen(false);
+        },
+        onError: (err) => {
+          toast.error(getErrorMessage(err, "Failed to update order status"));
+        },
+      },
+    );
   };
 
   return (
@@ -112,16 +135,32 @@ export function OrderDetailsModal({
                 key={item.id}
                 className="flex items-center justify-between gap-3 px-4 py-3 text-sm"
               >
-                <div className="min-w-0">
-                  <p className="truncate font-medium text-foreground">
-                    {item.productName}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Pack: {item.selectedPack} • {item.quantity} ×{" "}
-                    {formatCurrencyBDT(item.unitPrice)}
-                  </p>
+                <div className="flex min-w-0 items-center gap-3">
+                  {item.productImage ? (
+                    <div className="relative size-9 shrink-0 overflow-hidden rounded-lg border border-border bg-muted">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={item.productImage}
+                        alt={item.productName}
+                        className="size-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                      <Package className="size-4" />
+                    </span>
+                  )}
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-foreground">
+                      {item.productName}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Pack: {item.selectedPack} • {item.quantity} ×{" "}
+                      {formatCurrencyBDT(item.unitPrice)}
+                    </p>
+                  </div>
                 </div>
-                <span className="font-heading font-semibold text-foreground">
+                <span className="shrink-0 font-heading font-semibold text-foreground">
                   {formatCurrencyBDT(item.lineTotal)}
                 </span>
               </div>
@@ -152,6 +191,7 @@ export function OrderDetailsModal({
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <Select
               value={status}
+              disabled={isPending || isCancelled}
               onValueChange={(value) => {
                 if (value) setStatus(value as OrderStatus);
               }}
@@ -181,14 +221,30 @@ export function OrderDetailsModal({
             </Select>
 
             <div className="flex items-center justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isPending}
+                onClick={() => handleOpenChange(false)}
+              >
                 Close
               </Button>
-              <Button type="button" onClick={handleStatusUpdate}>
+              <Button
+                type="button"
+                loading={isPending}
+                loadingText="Updating..."
+                disabled={isCancelled || status === order.status}
+                onClick={handleStatusUpdate}
+              >
                 Update Status
               </Button>
             </div>
           </div>
+          {isCancelled && (
+            <p className="text-xs text-muted-foreground">
+              Cancelled orders cannot be reopened.
+            </p>
+          )}
         </div>
       </div>
     </Modal>
