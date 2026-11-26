@@ -1,11 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { toast } from "sonner";
 import { ConfirmationModal } from "@/components/common/confirmation-modal";
 import { Badge } from "@/components/ui/badge";
-import type { ContactStatus, MockContactMessage } from "@/data/mock-dashboard";
+import { getErrorMessage } from "@/lib/error";
 import { formatDate } from "@/lib/utils";
+import { useDeleteContact } from "@/services";
+import type { ApiContactMessage, ContactStatus } from "@/types";
 import { ContactDetailsModal } from "./contact-details-modal";
 
 const statusVariantMap: Record<
@@ -25,7 +28,37 @@ const statusLabelMap: Record<ContactStatus, string> = {
   ARCHIVED: "Archived",
 };
 
-export const contactColumns: ColumnDef<MockContactMessage>[] = [
+function DeleteContactCell({ contact }: { contact: ApiContactMessage }) {
+  const [open, setOpen] = useState(false);
+  const { mutate: removeContact, isPending } = useDeleteContact();
+
+  return (
+    <ConfirmationModal
+      open={open}
+      onOpenChange={setOpen}
+      isLoading={isPending}
+      title="Delete Message"
+      description={`Are you sure you want to delete the inquiry from "${contact.name}"? This action cannot be undone.`}
+      confirmText="Delete"
+      loadingText="Deleting..."
+      triggerVariant="ghost"
+      triggerSize="icon"
+      onConfirm={() => {
+        removeContact(contact.id, {
+          onSuccess: () => {
+            toast.success(`Deleted message from "${contact.name}"`);
+            setOpen(false);
+          },
+          onError: (err) => {
+            toast.error(getErrorMessage(err, "Failed to delete message"));
+          },
+        });
+      }}
+    />
+  );
+}
+
+export const contactColumns: ColumnDef<ApiContactMessage>[] = [
   {
     accessorKey: "name",
     header: "Sender",
@@ -89,17 +122,7 @@ export const contactColumns: ColumnDef<MockContactMessage>[] = [
       return (
         <div className="flex items-center justify-end gap-1.5 pr-2">
           <ContactDetailsModal contact={contact} />
-
-          <ConfirmationModal
-            title="Delete Message"
-            description={`Are you sure you want to delete the inquiry from "${contact.name}"? This action cannot be undone.`}
-            confirmText="Delete"
-            triggerVariant="ghost"
-            triggerSize="icon"
-            onConfirm={() => {
-              toast.success(`Deleted message from "${contact.name}" (UI preview)`);
-            }}
-          />
+          <DeleteContactCell contact={contact} />
         </div>
       );
     },

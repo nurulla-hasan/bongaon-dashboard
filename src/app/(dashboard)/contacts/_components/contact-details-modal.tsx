@@ -4,7 +4,6 @@ import { useState, type ReactNode } from "react";
 import { useForm } from "@tanstack/react-form";
 import { Eye, Mail, Phone, Send } from "lucide-react";
 import { toast } from "sonner";
-import { z } from "zod";
 import { FormInput } from "@/components/common/form-input";
 import { Modal } from "@/components/common/modal";
 import { Button } from "@/components/ui/button";
@@ -16,8 +15,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { ContactStatus, MockContactMessage } from "@/data/mock-dashboard";
+import { getErrorMessage } from "@/lib/error";
 import { formatDate } from "@/lib/utils";
+import { useReplyContact, useUpdateContactStatus } from "@/services";
+import type { ApiContactMessage, ContactStatus } from "@/types";
+import { replyContactSchema } from "@/validations";
 
 const CONTACT_STATUS_OPTIONS: { label: string; value: ContactStatus }[] = [
   { label: "New", value: "NEW" },
@@ -26,17 +28,8 @@ const CONTACT_STATUS_OPTIONS: { label: string; value: ContactStatus }[] = [
   { label: "Archived", value: "ARCHIVED" },
 ];
 
-const replySchema = z.object({
-  subject: z.string().trim().max(150),
-  replyMessage: z
-    .string()
-    .trim()
-    .min(2, { error: "Reply message must be at least 2 characters." })
-    .max(3000, { error: "Reply message cannot exceed 3000 characters." }),
-});
-
 interface ContactDetailsModalProps {
-  contact: MockContactMessage;
+  contact: ApiContactMessage;
   actionTrigger?: ReactNode;
 }
 
@@ -47,25 +40,51 @@ export function ContactDetailsModal({
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState<ContactStatus>(contact.status);
 
+  const { mutate: updateStatus, isPending: isUpdatingStatus } =
+    useUpdateContactStatus();
+  const { mutate: sendReply, isPending: isReplying } = useReplyContact();
+  const isBusy = isUpdatingStatus || isReplying;
+
   const form = useForm({
     defaultValues: {
       subject: contact.subject ? `Re: ${contact.subject}` : "Re: Your Inquiry",
       replyMessage: contact.adminReply ?? "",
     },
     validators: {
-      onSubmit: replySchema,
+      onChange: replyContactSchema,
     },
-    onSubmit: async () => {
-      toast.success(`Reply sent to ${contact.email || contact.name} (UI preview)`);
-      setOpen(false);
+    onSubmit: ({ value }) => {
+      if (!contact.email) return;
+
+      sendReply(
+        {
+          id: contact.id,
+          payload: {
+            subject: value.subject.trim() || undefined,
+            replyMessage: value.replyMessage.trim(),
+          },
+        },
+        {
+          onSuccess: () => {
+            toast.success(`Reply sent to ${contact.email}`);
+            setOpen(false);
+          },
+          onError: (err) => {
+            toast.error(getErrorMessage(err, "Failed to send email reply"));
+          },
+        },
+      );
     },
   });
 
   const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen && isBusy) return;
     if (nextOpen) {
       setStatus(contact.status);
       form.reset({
-        subject: contact.subject ? `Re: ${contact.subject}` : "Re: Your Inquiry",
+        subject: contact.subject
+          ? `Re: ${contact.subject}`
+          : "Re: Your Inquiry",
         replyMessage: contact.adminReply ?? "",
       });
     }
@@ -73,8 +92,23 @@ export function ContactDetailsModal({
   };
 
   const handleStatusUpdate = () => {
-    toast.success(`Inquiry status updated to ${status} (UI preview)`);
-    setOpen(false);
+    if (status === contact.status) return;
+
+    updateStatus(
+      { id: contact.id, payload: { status } },
+      {
+        onSuccess: () => {
+          const statusLabel =
+            CONTACT_STATUS_OPTIONS.find((opt) => opt.value === status)?.label ??
+            status;
+          toast.success(`Inquiry status updated to ${statusLabel}`);
+          setOpen(false);
+        },
+        onError: (err) => {
+          toast.error(getErrorMessage(err, "Failed to update inquiry status"));
+        },
+      },
+    );
   };
 
   return (
@@ -113,6 +147,11 @@ export function ContactDetailsModal({
               )}
             </div>
           </div>
+          {contact.repliedAt && (
+            <p className="text-xs text-muted-foreground">
+              Last replied on {formatDate(contact.repliedAt)}
+            </p>
+          )}
         </div>
 
         <div className="space-y-1.5">
@@ -129,6 +168,7 @@ export function ContactDetailsModal({
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <Select
               value={status}
+              disabled={isBusy}
               onValueChange={(value) => {
                 if (value) setStatus(value as ContactStatus);
               }}
@@ -157,7 +197,14 @@ export function ContactDetailsModal({
               </SelectContent>
             </Select>
 
-            <Button type="button" variant="outline" onClick={handleStatusUpdate}>
+            <Button
+              type="button"
+              variant="outline"
+              loading={isUpdatingStatus}
+              loadingText="Updating..."
+              disabled={isBusy || status === contact.status}
+              onClick={handleStatusUpdate}
+            >
               Update Status
             </Button>
           </div>
@@ -177,6 +224,7 @@ export function ContactDetailsModal({
             name="subject"
             label="Reply Subject"
             placeholder="Re: Your inquiry"
+            disabled={isBusy || !contact.email}
           />
 
           <FormInput
@@ -185,17 +233,34 @@ export function ContactDetailsModal({
             label={
               contact.email
                 ? `Email Reply to ${contact.email}`
-                : "Admin Reply Note"
+                : "Email Reply"
             }
             type="textarea"
             placeholder="Write your reply to the customer..."
+            disabled={isBusy || !contact.email}
           />
 
+          {!contact.email && (
+            <p className="text-xs text-muted-foreground">
+              No email address was provided for this inquiry.
+            </p>
+          )}
+
           <div className="flex items-center justify-end gap-2 pt-1">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isBusy}
+              onClick={() => handleOpenChange(false)}
+            >
               Close
             </Button>
-            <Button type="submit" disabled={!contact.email}>
+            <Button
+              type="submit"
+              loading={isReplying}
+              loadingText="Sending..."
+              disabled={isBusy || !contact.email}
+            >
               <Send className="size-4" />
               Send Email Reply
             </Button>

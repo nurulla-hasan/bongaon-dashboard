@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { FilterSelect } from "@/components/common/filter-select";
 import { SearchInput } from "@/components/common/search-input";
@@ -31,30 +32,32 @@ export default function ContactsPage() {
         description="Read customer inquiries, update status, and send email replies."
       />
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <SearchInput
-          placeholder="Search name, phone, email, or subject..."
-          ariaLabel="Search contacts"
-        />
+      <Suspense fallback={null}>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <SearchInput
+            placeholder="Search name, phone, email, or subject..."
+            ariaLabel="Search contacts"
+          />
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <FilterSelect
-            filterKey="status"
-            placeholder="All Status"
-            options={STATUS_OPTIONS}
-            className="w-full sm:w-40"
-          />
-          <FilterSelect
-            filterKey="sortBy"
-            placeholder="Sort By"
-            defaultValue="newest"
-            options={SORT_OPTIONS}
-            className="w-full sm:w-40"
-          />
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <FilterSelect
+              filterKey="status"
+              placeholder="All Status"
+              options={STATUS_OPTIONS}
+              className="w-full sm:w-40"
+            />
+            <FilterSelect
+              filterKey="sortBy"
+              placeholder="Sort By"
+              defaultValue="newest"
+              options={SORT_OPTIONS}
+              className="w-full sm:w-40"
+            />
+          </div>
         </div>
-      </div>
 
-      <ContactsTable />
+        <ContactsTable />
+      </Suspense>
     </div>
   );
 }
