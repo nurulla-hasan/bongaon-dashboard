@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { useForm } from "@tanstack/react-form";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
@@ -29,6 +29,7 @@ export function CategoryFormModal({
   actionTrigger,
 }: CategoryFormModalProps) {
   const [open, setOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const isEditing = Boolean(category);
 
@@ -37,6 +38,7 @@ export function CategoryFormModal({
   const { mutate: uploadImage, isPending: isUploading } =
     useUploadCategoryImage();
   const isPending = isCreating || isUpdating || isUploading;
+  const isBusy = isSubmitting || isPending;
 
   const form = useForm({
     defaultValues: {
@@ -51,6 +53,8 @@ export function CategoryFormModal({
       onChange: categorySchema,
     },
     onSubmit: ({ value }) => {
+      setIsSubmitting(true);
+
       const payload = {
         name: value.name.trim(),
         slug: value.slug.trim() || undefined,
@@ -63,6 +67,7 @@ export function CategoryFormModal({
       const handleImageOrClose = (id: string, successMessage: string) => {
         if (!selectedFile) {
           toast.success(successMessage);
+          setIsSubmitting(false);
           setOpen(false);
           return;
         }
@@ -72,6 +77,7 @@ export function CategoryFormModal({
           {
             onSuccess: () => {
               toast.success(successMessage);
+              setIsSubmitting(false);
               setOpen(false);
             },
             onError: (err) => {
@@ -81,6 +87,10 @@ export function CategoryFormModal({
                   "Category saved, but image upload failed",
                 ),
               );
+              setIsSubmitting(false);
+              if (!isEditing) {
+                setOpen(false);
+              }
             },
           },
         );
@@ -97,6 +107,7 @@ export function CategoryFormModal({
               );
             },
             onError: (err) => {
+              setIsSubmitting(false);
               toast.error(getErrorMessage(err, "Failed to update category"));
             },
           },
@@ -109,29 +120,33 @@ export function CategoryFormModal({
           handleImageOrClose(res.data.id, `Created "${value.name.trim()}"`);
         },
         onError: (err) => {
+          setIsSubmitting(false);
           toast.error(getErrorMessage(err, "Failed to create category"));
         },
       });
     },
   });
 
-  useEffect(() => {
-    if (!open) return;
-    setSelectedFile(null);
-    form.reset({
-      name: category?.name ?? "",
-      slug: category?.slug ?? "",
-      subtitle: category?.subtitle ?? "",
-      sortOrder: category?.sortOrder ?? 1,
-      isActive: category?.isActive ?? true,
-      showOnHome: category?.showOnHome ?? false,
-    });
-  }, [open, category, form]);
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen && isBusy) return;
+    if (nextOpen) {
+      setSelectedFile(null);
+      form.reset({
+        name: category?.name ?? "",
+        slug: category?.slug ?? "",
+        subtitle: category?.subtitle ?? "",
+        sortOrder: category?.sortOrder ?? 1,
+        isActive: category?.isActive ?? true,
+        showOnHome: category?.showOnHome ?? false,
+      });
+    }
+    setOpen(nextOpen);
+  };
 
   return (
     <Modal
       open={open}
-      onOpenChange={setOpen}
+      onOpenChange={handleOpenChange}
       actionTrigger={
         actionTrigger ?? (
           <Button>
@@ -162,7 +177,7 @@ export function CategoryFormModal({
           name="name"
           label="Category Name"
           placeholder="e.g. Dry Fish & Bhorta"
-          disabled={isPending}
+          disabled={isBusy}
         />
 
         <div className="grid gap-4 sm:grid-cols-2">
@@ -171,7 +186,7 @@ export function CategoryFormModal({
             name="slug"
             label="Slug"
             placeholder="e.g. shutki-bhorta"
-            disabled={isPending}
+            disabled={isBusy}
           />
 
           <FormInput
@@ -180,7 +195,7 @@ export function CategoryFormModal({
             label="Sort Order"
             type="number"
             min={0}
-            disabled={isPending}
+            disabled={isBusy}
           />
         </div>
 
@@ -190,16 +205,16 @@ export function CategoryFormModal({
           label="Subtitle"
           type="textarea"
           placeholder="Short description shown under the category title"
-          disabled={isPending}
+          disabled={isBusy}
         />
 
         <ImageUpload
-          key={category?.id ?? "new-category"}
+          key={`${category?.id ?? "new-category"}-${open}`}
           id="category-image"
           label="Category Image (Optional)"
           description="PNG, JPG or WebP (uploaded via /categories/:id/image)"
           initialUrls={category?.imageUrl ? [category.imageUrl] : []}
-          disabled={isPending}
+          disabled={isBusy}
           onFilesChange={(files) => setSelectedFile(files[0] ?? null)}
         />
 
@@ -216,7 +231,7 @@ export function CategoryFormModal({
               </div>
               <Switch
                 id={field.name}
-                disabled={isPending}
+                disabled={isBusy}
                 checked={field.state.value}
                 onCheckedChange={(checked) => field.handleChange(checked)}
               />
@@ -237,7 +252,7 @@ export function CategoryFormModal({
               </div>
               <Switch
                 id={field.name}
-                disabled={isPending}
+                disabled={isBusy}
                 checked={field.state.value}
                 onCheckedChange={(checked) => field.handleChange(checked)}
               />
@@ -249,14 +264,14 @@ export function CategoryFormModal({
           <Button
             type="button"
             variant="outline"
-            onClick={() => setOpen(false)}
-            disabled={isPending}
+            onClick={() => handleOpenChange(false)}
+            disabled={isBusy}
           >
             Cancel
           </Button>
           <Button
             type="submit"
-            loading={isPending}
+            loading={isBusy}
             loadingText={isEditing ? "Saving..." : "Creating..."}
           >
             {isEditing ? "Save Changes" : "Create Category"}
